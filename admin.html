@@ -1230,9 +1230,40 @@
     <div class="notification" id="notification"></div>
     
     <script>
-        // Инициализация при загрузке
+        // Усиленная проверка загрузки админ-панели
         document.addEventListener('DOMContentLoaded', function() {
-            checkAdminAuth();
+            console.log('✅ Админ-панель загружена');
+            
+            // Проверяем, правильно ли мы загрузились
+            if (!window.location.href.includes('admin.html')) {
+                console.warn('⚠️ Предупреждение: Мы не на странице admin.html');
+                console.log('Текущий URL:', window.location.href);
+            }
+            
+            // Усиленная проверка авторизации
+            const adminPassword = 'admin123';
+            
+            // Если пользователь не авторизован, показываем запрос пароля
+            if (!localStorage.getItem('adminLoggedIn')) {
+                const password = prompt('🔐 Введите пароль для доступа к админ-панели:');
+                if (password === adminPassword) {
+                    localStorage.setItem('adminLoggedIn', 'true');
+                    showNotification('✅ Добро пожаловать в админ-панель!', 'success');
+                    
+                    // Перезагружаем страницу после успешной авторизации
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert('❌ Неверный пароль! Доступ запрещен.');
+                    // Перенаправляем на главную страницу
+                    window.location.href = 'index.html';
+                }
+            } else {
+                console.log('✅ Пользователь уже авторизован');
+            }
+            
+            // Дальнейшая инициализация
             loadAdminData();
             loadProductsForAdmin();
             loadOrders();
@@ -1241,21 +1272,19 @@
             loadCurrentColors();
         });
         
-        // Проверка авторизации в админке
-        function checkAdminAuth() {
-            const adminPassword = 'admin123'; // Пароль для входа в админку
-            
-            if (!localStorage.getItem('adminLoggedIn')) {
-                const password = prompt('🔐 Введите пароль для доступа к админ-панели:');
-                if (password === adminPassword) {
-                    localStorage.setItem('adminLoggedIn', 'true');
-                    showNotification('Добро пожаловать в админ-панель!', 'success');
-                } else {
-                    alert('❌ Неверный пароль! Доступ запрещен.');
-                    window.location.href = 'index.html';
-                }
-            }
+        // Функция для отладки
+        function checkAdminPage() {
+            console.log('=== Информация о странице ===');
+            console.log('URL:', window.location.href);
+            console.log('Название страницы:', document.title);
+            console.log('Есть ли элемент .admin-header:', document.querySelector('.admin-header') ? 'Да' : 'Нет');
+            console.log('Есть ли элемент .admin-container:', document.querySelector('.admin-container') ? 'Да' : 'Нет');
+            console.log('localStorage adminLoggedIn:', localStorage.getItem('adminLoggedIn'));
+            console.log('===========================');
         }
+        
+        // Вызываем проверку
+        checkAdminPage();
         
         // Переключение между секциями
         function showSection(sectionId) {
@@ -1865,7 +1894,7 @@
                 
                 localStorage.setItem('products', JSON.stringify(products));
                 
-                // Возвращаем кнопку в исходное состояние
+                // Возвращаем кнопку добавления
                 const addButton = document.querySelector('#products-section .btn-primary');
                 addButton.innerHTML = '<i class="fas fa-plus-circle"></i> Добавить товар';
                 addButton.onclick = function() { addProduct(); };
@@ -1873,120 +1902,47 @@
                 // Очищаем форму
                 clearProductForm();
                 
-                // Обновляем список товаров
+                // Обновляем список
                 loadProductsForAdmin();
                 
                 showNotification(`✅ Товар "${name}" обновлен!`, 'success');
+            } else {
+                showNotification('Товар не найден', 'error');
             }
         }
         
         // Удаление товара
         function deleteProduct(productId) {
-            if (!confirm('Вы уверены, что хотите удалить этот товар? Это действие нельзя отменить.')) {
-                return;
-            }
-            
-            let products = JSON.parse(localStorage.getItem('products')) || [];
-            const productIndex = products.findIndex(p => p.id === productId);
-            
-            if (productIndex !== -1) {
-                const productName = products[productIndex].name;
-                products.splice(productIndex, 1);
-                localStorage.setItem('products', JSON.stringify(products));
+            if (confirm('Вы уверены, что хотите удалить этот товар?')) {
+                let products = JSON.parse(localStorage.getItem('products')) || [];
+                const productIndex = products.findIndex(p => p.id === productId);
                 
-                loadProductsForAdmin();
-                updateSidebarInfo();
-                showNotification(`✅ Товар "${productName}" удален`, 'success');
+                if (productIndex !== -1) {
+                    const productName = products[productIndex].name;
+                    products.splice(productIndex, 1);
+                    localStorage.setItem('products', JSON.stringify(products));
+                    
+                    showNotification(`✅ Товар "${productName}" удален!`, 'success');
+                    loadProductsForAdmin();
+                    updateSidebarInfo();
+                }
             }
         }
         
         // Загрузка заказов
         function loadOrders() {
             const orders = JSON.parse(localStorage.getItem('orders')) || [];
-            const container = document.getElementById('orders-table-body');
+            const tbody = document.getElementById('orders-table-body');
             const ordersCount = document.getElementById('orders-count');
             
             ordersCount.textContent = orders.length;
             
             if (orders.length === 0) {
-                container.innerHTML = `
+                tbody.innerHTML = `
                     <tr>
                         <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
-                            <i class="fas fa-shopping-cart" style="font-size: 3rem; margin-bottom: 15px; color: #ddd;"></i>
-                            <h3 style="margin-bottom: 10px;">Нет заказов</h3>
-                            <p>Заказы появятся здесь, когда клиенты начнут оформлять их на сайте</p>
-                        </td>
-                    </tr>
-                `;
-                updateSidebarInfo();
-                updateStatistics();
-                return;
-            }
-            
-            let html = '';
-            orders.reverse().forEach(order => {
-                const status = order.status || 'new';
-                const statusText = getStatusText(status);
-                const statusClass = `status-${status}`;
-                
-                html += `
-                    <tr>
-                        <td><strong>${order.id ? order.id.substring(0, 8) : 'N/A'}</strong></td>
-                        <td>${order.orderDate || new Date(order.createdAt).toLocaleDateString('ru-RU')}</td>
-                        <td>
-                            <div style="font-weight: bold;">${order.userName || 'Гость'}</div>
-                            <div style="font-size: 0.85rem; color: #666;">${order.userPhone || ''}</div>
-                            <div style="font-size: 0.85rem; color: #888;">${order.userEmail || ''}</div>
-                        </td>
-                        <td><strong style="color: var(--admin-green);">${order.total || 0} ₽</strong></td>
-                        <td>${order.deliveryType === 'delivery' ? '<i class="fas fa-truck"></i> Доставка' : '<i class="fas fa-store"></i> Самовывоз'}</td>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <div class="action-buttons">
-                                <button onclick="viewOrder('${order.id}')" class="action-btn btn-view" title="Просмотреть">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button onclick="changeOrderStatus('${order.id}', 'processing')" class="action-btn btn-process" title="В обработку">
-                                    <i class="fas fa-cog"></i>
-                                </button>
-                                <button onclick="changeOrderStatus('${order.id}', 'completed')" class="action-btn btn-complete" title="Завершить">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                <button onclick="changeOrderStatus('${order.id}', 'cancelled')" class="action-btn btn-cancel" title="Отменить">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            container.innerHTML = html;
-            updateSidebarInfo();
-            updateStatistics();
-        }
-        
-        // Фильтрация заказов
-        function filterOrders(status) {
-            const filterButtons = document.querySelectorAll('.filter-btn');
-            filterButtons.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
-            const container = document.getElementById('orders-table-body');
-            
-            let filteredOrders = orders;
-            if (status !== 'all') {
-                filteredOrders = orders.filter(order => (order.status || 'new') === status);
-            }
-            
-            if (filteredOrders.length === 0) {
-                container.innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
-                            <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 15px; color: #ddd;"></i>
-                            <h3 style="margin-bottom: 10px;">Нет заказов</h3>
-                            <p>${status === 'all' ? 'Заказы появятся здесь, когда клиенты начнут оформлять их на сайте' : 'Нет заказов с выбранным статусом'}</p>
+                            <i class="fas fa-shopping-cart" style="font-size: 2rem; margin-bottom: 10px; display: block; color: #ddd;"></i>
+                            Заказов пока нет
                         </td>
                     </tr>
                 `;
@@ -1994,123 +1950,69 @@
             }
             
             let html = '';
-            filteredOrders.reverse().forEach(order => {
-                const status = order.status || 'new';
-                const statusText = getStatusText(status);
-                const statusClass = `status-${status}`;
+            orders.reverse().forEach(order => {
+                const statusClass = `status-${order.status || 'new'}`;
+                const statusText = getOrderStatusText(order.status);
                 
                 html += `
                     <tr>
-                        <td><strong>${order.id ? order.id.substring(0, 8) : 'N/A'}</strong></td>
-                        <td>${order.orderDate || new Date(order.createdAt).toLocaleDateString('ru-RU')}</td>
+                        <td style="font-family: monospace; font-size: 0.85rem;">${order.id ? order.id.substring(0, 8) + '...' : 'N/A'}</td>
+                        <td>${order.orderDate || new Date(order.createdAt).toLocaleString('ru-RU')}</td>
                         <td>
-                            <div style="font-weight: bold;">${order.userName || 'Гость'}</div>
-                            <div style="font-size: 0.85rem; color: #666;">${order.userPhone || ''}</div>
+                            <strong>${order.userName || 'Не указано'}</strong><br>
+                            <small style="color: #666;">${order.userPhone || ''}</small>
                         </td>
-                        <td><strong style="color: var(--admin-green);">${order.total || 0} ₽</strong></td>
-                        <td>${order.deliveryType === 'delivery' ? '<i class="fas fa-truck"></i> Доставка' : '<i class="fas fa-store"></i> Самовывоз'}</td>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td style="font-weight: bold; color: var(--admin-green);">${order.total || 0} ₽</td>
+                        <td>
+                            ${order.deliveryType === 'delivery' ? 
+                                '<span style="color: #3498db;"><i class="fas fa-truck"></i> Доставка</span>' : 
+                                '<span style="color: #2c3e50;"><i class="fas fa-store"></i> Самовывоз</span>'}
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
                         <td>
                             <div class="action-buttons">
-                                <button onclick="viewOrder('${order.id}')" class="action-btn btn-view" title="Просмотреть">
+                                <button onclick="viewOrder('${order.id}')" class="action-btn btn-view" title="Просмотр">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button onclick="changeOrderStatus('${order.id}', 'processing')" class="action-btn btn-process" title="В обработку">
-                                    <i class="fas fa-cog"></i>
-                                </button>
-                                <button onclick="changeOrderStatus('${order.id}', 'completed')" class="action-btn btn-complete" title="Завершить">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                <button onclick="changeOrderStatus('${order.id}', 'cancelled')" class="action-btn btn-cancel" title="Отменить">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                                ${order.status === 'new' ? 
+                                    `<button onclick="updateOrderStatus('${order.id}', 'processing')" class="action-btn btn-process" title="В обработку">
+                                        <i class="fas fa-cog"></i>
+                                    </button>` : ''}
+                                ${order.status === 'processing' ? 
+                                    `<button onclick="updateOrderStatus('${order.id}', 'completed')" class="action-btn btn-complete" title="Завершить">
+                                        <i class="fas fa-check"></i>
+                                    </button>` : ''}
+                                ${order.status !== 'completed' && order.status !== 'cancelled' ? 
+                                    `<button onclick="updateOrderStatus('${order.id}', 'cancelled')" class="action-btn btn-cancel" title="Отменить">
+                                        <i class="fas fa-times"></i>
+                                    </button>` : ''}
                             </div>
                         </td>
                     </tr>
                 `;
             });
             
-            container.innerHTML = html;
+            tbody.innerHTML = html;
         }
         
-        // Поиск заказов
-        function searchOrders() {
-            const searchTerm = document.getElementById('order-search').value.toLowerCase();
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
-            const container = document.getElementById('orders-table-body');
-            
-            if (!searchTerm) {
-                loadOrders();
-                return;
-            }
-            
-            const filteredOrders = orders.filter(order => 
-                (order.userName && order.userName.toLowerCase().includes(searchTerm)) ||
-                (order.userPhone && order.userPhone.toLowerCase().includes(searchTerm)) ||
-                (order.userEmail && order.userEmail.toLowerCase().includes(searchTerm)) ||
-                (order.id && order.id.toLowerCase().includes(searchTerm))
-            );
-            
-            if (filteredOrders.length === 0) {
-                container.innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
-                            <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 15px; color: #ddd;"></i>
-                            <h3 style="margin-bottom: 10px;">Заказы не найдены</h3>
-                            <p>Попробуйте другой поисковый запрос</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            let html = '';
-            filteredOrders.reverse().forEach(order => {
-                const status = order.status || 'new';
-                const statusText = getStatusText(status);
-                const statusClass = `status-${status}`;
-                
-                html += `
-                    <tr>
-                        <td><strong>${order.id ? order.id.substring(0, 8) : 'N/A'}</strong></td>
-                        <td>${order.orderDate || new Date(order.createdAt).toLocaleDateString('ru-RU')}</td>
-                        <td>
-                            <div style="font-weight: bold;">${order.userName || 'Гость'}</div>
-                            <div style="font-size: 0.85rem; color: #666;">${order.userPhone || ''}</div>
-                        </td>
-                        <td><strong style="color: var(--admin-green);">${order.total || 0} ₽</strong></td>
-                        <td>${order.deliveryType === 'delivery' ? '<i class="fas fa-truck"></i> Доставка' : '<i class="fas fa-store"></i> Самовывоз'}</td>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <div class="action-buttons">
-                                <button onclick="viewOrder('${order.id}')" class="action-btn btn-view" title="Просмотреть">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button onclick="changeOrderStatus('${order.id}', 'processing')" class="action-btn btn-process" title="В обработку">
-                                    <i class="fas fa-cog"></i>
-                                </button>
-                                <button onclick="changeOrderStatus('${order.id}', 'completed')" class="action-btn btn-complete" title="Завершить">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                <button onclick="changeOrderStatus('${order.id}', 'cancelled')" class="action-btn btn-cancel" title="Отменить">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            container.innerHTML = html;
+        function getOrderStatusText(status) {
+            const statusMap = {
+                'new': 'Новый',
+                'processing': 'В обработке',
+                'completed': 'Завершен',
+                'cancelled': 'Отменен'
+            };
+            return statusMap[status] || 'Новый';
         }
         
-        // Просмотр заказа
         function viewOrder(orderId) {
             const orders = JSON.parse(localStorage.getItem('orders')) || [];
             const order = orders.find(o => o.id === orderId);
             
             if (!order) {
-                showNotification('❌ Заказ не найден', 'error');
+                showNotification('Заказ не найден', 'error');
                 return;
             }
             
@@ -2118,102 +2020,101 @@
             if (order.cart && order.cart.length > 0) {
                 order.cart.forEach(item => {
                     itemsHtml += `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px;">
-                            <div>
-                                <div style="font-weight: bold;">${item.name}</div>
-                                <div style="font-size: 0.85rem; color: #666;">
-                                    ${item.price} ₽ × ${item.quantity} шт.
-                                </div>
-                            </div>
-                            <div style="font-weight: bold; color: var(--admin-green);">
-                                ${item.price * item.quantity} ₽
-                            </div>
-                        </div>
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.price} ₽</td>
+                            <td>${item.quantity}</td>
+                            <td>${item.price * item.quantity} ₽</td>
+                        </tr>
                     `;
                 });
             }
             
-            const status = order.status || 'new';
-            const statusText = getStatusText(status);
-            const statusColor = getStatusColor(status);
-            
             const modalHtml = `
-                <div class="edit-product-modal" style="display: flex;">
-                    <div class="edit-product-content">
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                    <div style="background: white; border-radius: 10px; padding: 25px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h2 style="color: var(--admin-blue); margin: 0;">
                                 <i class="fas fa-receipt"></i> Заказ #${orderId.substring(0, 8)}
                             </h2>
-                            <button onclick="closeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+                            <button onclick="closeViewModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
                         </div>
                         
                         <div style="margin-bottom: 25px;">
-                            <h3 style="color: #555; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-user"></i> Информация о клиенте
-                            </h3>
+                            <h3 style="color: #555; margin-bottom: 10px;">Информация о заказе</h3>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px;">
-                                    <div style="font-size: 0.85rem; color: #666;">Имя</div>
-                                    <div style="font-weight: bold;">${order.userName || 'Не указано'}</div>
+                                <div>
+                                    <p><strong>Клиент:</strong> ${order.userName || 'Не указано'}</p>
+                                    <p><strong>Телефон:</strong> ${order.userPhone || 'Не указан'}</p>
+                                    <p><strong>Email:</strong> ${order.userEmail || 'Не указан'}</p>
                                 </div>
-                                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px;">
-                                    <div style="font-size: 0.85rem; color: #666;">Телефон</div>
-                                    <div style="font-weight: bold;">${order.userPhone || 'Не указан'}</div>
-                                </div>
-                                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px;">
-                                    <div style="font-size: 0.85rem; color: #666;">Email</div>
-                                    <div style="font-weight: bold;">${order.userEmail || 'Не указан'}</div>
+                                <div>
+                                    <p><strong>Дата:</strong> ${order.orderDate || new Date(order.createdAt).toLocaleString('ru-RU')}</p>
+                                    <p><strong>Статус:</strong> <span class="status-badge status-${order.status || 'new'}">${getOrderStatusText(order.status)}</span></p>
+                                    <p><strong>Тип получения:</strong> ${order.deliveryType === 'delivery' ? 'Доставка' : 'Самовывоз'}</p>
                                 </div>
                             </div>
+                            
+                            ${order.deliveryType === 'delivery' ? `
+                                <div style="margin-top: 10px;">
+                                    <p><strong>Адрес доставки:</strong> ${order.address || 'Не указан'}</p>
+                                </div>
+                            ` : ''}
+                            
+                            ${order.comment ? `
+                                <div style="margin-top: 10px; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                                    <p><strong>Комментарий:</strong> ${order.comment}</p>
+                                </div>
+                            ` : ''}
                         </div>
                         
-                        <div style="margin-bottom: 20px;">
-                            <h3 style="color: #555; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-info-circle"></i> Детали заказа
-                            </h3>
-                            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
-                                <p><strong>Дата:</strong> ${order.orderDate || new Date(order.createdAt).toLocaleString('ru-RU')}</p>
-                                <p><strong>Статус:</strong> <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span></p>
-                                <p><strong>Тип получения:</strong> ${order.deliveryType === 'delivery' ? '<i class="fas fa-truck"></i> Доставка' : '<i class="fas fa-store"></i> Самовывоз'}</p>
-                                ${order.deliveryType === 'delivery' ? `<p><strong>Адрес:</strong> ${order.address || 'Не указан'}</p>` : ''}
-                                ${order.comment ? `<p><strong>Комментарий:</strong> ${order.comment}</p>` : ''}
-                            </div>
+                        <div style="margin-bottom: 25px;">
+                            <h3 style="color: #555; margin-bottom: 10px;">Состав заказа</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f8f9fa;">
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Товар</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Цена</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Кол-во</th>
+                                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Сумма</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsHtml || '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #666;">Товары не указаны</td></tr>'}
+                                </tbody>
+                            </table>
                         </div>
                         
-                        <div style="margin-bottom: 20px;">
-                            <h3 style="color: #555; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-box"></i> Состав заказа
-                            </h3>
-                            ${itemsHtml || '<p style="color: #666; text-align: center; padding: 20px;">Товары не указаны</p>'}
-                        </div>
-                        
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>Товары:</span>
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span>Стоимость товаров:</span>
                                 <span>${order.subtotal || 0} ₽</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                                 <span>Доставка:</span>
                                 <span>${order.deliveryCost === 0 ? 'Бесплатно' : order.deliveryCost + ' ₽'}</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 1.2rem; color: var(--admin-green); font-weight: bold;">
+                            <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: bold; color: var(--admin-green); border-top: 2px solid #ddd; padding-top: 10px;">
                                 <span>Итого:</span>
                                 <span>${order.total || 0} ₽</span>
                             </div>
                         </div>
                         
                         <div style="margin-top: 20px; display: flex; gap: 10px;">
-                            <button class="btn btn-primary" onclick="changeOrderStatus('${orderId}', 'processing'); closeModal();">
-                                <i class="fas fa-cog"></i> В обработку
-                            </button>
-                            <button class="btn btn-primary" onclick="changeOrderStatus('${orderId}', 'completed'); closeModal();">
-                                <i class="fas fa-check"></i> Завершить
-                            </button>
-                            <button class="btn btn-danger" onclick="changeOrderStatus('${orderId}', 'cancelled'); closeModal();">
-                                <i class="fas fa-times"></i> Отменить
-                            </button>
-                            <button class="btn" onclick="closeModal()" style="background: #ddd;">
-                                Закрыть
+                            ${order.status === 'new' ? 
+                                `<button onclick="updateOrderStatus('${order.id}', 'processing'); closeViewModal();" class="btn btn-process" style="background: #f39c12; color: white;">
+                                    <i class="fas fa-cog"></i> Взять в обработку
+                                </button>` : ''}
+                            ${order.status === 'processing' ? 
+                                `<button onclick="updateOrderStatus('${order.id}', 'completed'); closeViewModal();" class="btn btn-complete">
+                                    <i class="fas fa-check"></i> Завершить
+                                </button>` : ''}
+                            ${order.status !== 'completed' && order.status !== 'cancelled' ? 
+                                `<button onclick="updateOrderStatus('${order.id}', 'cancelled'); closeViewModal();" class="btn btn-cancel">
+                                    <i class="fas fa-times"></i> Отменить
+                                </button>` : ''}
+                            <button onclick="closeViewModal()" class="btn" style="background: #95a5a6; color: white;">
+                                <i class="fas fa-times"></i> Закрыть
                             </button>
                         </div>
                     </div>
@@ -2225,55 +2126,142 @@
             document.body.appendChild(modal);
         }
         
-        // Закрытие модального окна
-        function closeModal() {
-            const modal = document.querySelector('.edit-product-modal');
+        function closeViewModal() {
+            const modal = document.querySelector('div[style*="position: fixed; top: 0; left: 0; width: 100%"]');
             if (modal) modal.remove();
         }
         
-        // Изменение статуса заказа
-        function changeOrderStatus(orderId, newStatus) {
-            let orders = JSON.parse(localStorage.getItem('orders')) || [];
+        function updateOrderStatus(orderId, status) {
+            const orders = JSON.parse(localStorage.getItem('orders')) || [];
             const orderIndex = orders.findIndex(o => o.id === orderId);
             
             if (orderIndex !== -1) {
-                orders[orderIndex].status = newStatus;
+                orders[orderIndex].status = status;
+                orders[orderIndex].updatedAt = new Date().toISOString();
                 localStorage.setItem('orders', JSON.stringify(orders));
+                
+                const statusText = getOrderStatusText(status);
+                showNotification(`✅ Статус заказа обновлен на "${statusText}"`, 'success');
                 loadOrders();
-                showNotification(`✅ Статус заказа изменен на "${getStatusText(newStatus)}"`, 'success');
+                updateStatistics();
+                updateSidebarInfo();
             }
         }
         
-        // Экспорт заказов
+        function filterOrders(filter) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            event.target.classList.add('active');
+            
+            // Здесь можно добавить фильтрацию заказов
+            loadOrders(); // Показываем все заказы
+        }
+        
+        function searchOrders() {
+            const searchTerm = document.getElementById('order-search').value.toLowerCase();
+            const orders = JSON.parse(localStorage.getItem('orders')) || [];
+            const tbody = document.getElementById('orders-table-body');
+            
+            if (!searchTerm) {
+                loadOrders();
+                return;
+            }
+            
+            const filteredOrders = orders.filter(order => 
+                (order.userName && order.userName.toLowerCase().includes(searchTerm)) ||
+                (order.userPhone && order.userPhone.toLowerCase().includes(searchTerm)) ||
+                (order.id && order.id.toLowerCase().includes(searchTerm)) ||
+                (order.userEmail && order.userEmail.toLowerCase().includes(searchTerm))
+            );
+            
+            if (filteredOrders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+                            <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 10px; display: block; color: #ddd;"></i>
+                            Заказы не найдены
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            let html = '';
+            filteredOrders.reverse().forEach(order => {
+                const statusClass = `status-${order.status || 'new'}`;
+                const statusText = getOrderStatusText(order.status);
+                
+                html += `
+                    <tr>
+                        <td style="font-family: monospace; font-size: 0.85rem;">${order.id ? order.id.substring(0, 8) + '...' : 'N/A'}</td>
+                        <td>${order.orderDate || new Date(order.createdAt).toLocaleString('ru-RU')}</td>
+                        <td>
+                            <strong>${order.userName || 'Не указано'}</strong><br>
+                            <small style="color: #666;">${order.userPhone || ''}</small>
+                        </td>
+                        <td style="font-weight: bold; color: var(--admin-green);">${order.total || 0} ₽</td>
+                        <td>
+                            ${order.deliveryType === 'delivery' ? 
+                                '<span style="color: #3498db;"><i class="fas fa-truck"></i> Доставка</span>' : 
+                                '<span style="color: #2c3e50;"><i class="fas fa-store"></i> Самовывоз</span>'}
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button onclick="viewOrder('${order.id}')" class="action-btn btn-view" title="Просмотр">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
         function exportOrders() {
             const orders = JSON.parse(localStorage.getItem('orders')) || [];
             
             if (orders.length === 0) {
-                showNotification('❌ Нет заказов для экспорта', 'warning');
+                showNotification('Нет заказов для экспорта', 'warning');
                 return;
             }
             
-            // Создаем CSV содержимое
-            let csv = 'ID;Дата;Клиент;Телефон;Email;Тип;Адрес;Сумма;Статус\n';
+            // Создаем CSV данные
+            let csv = 'ID,Дата,Клиент,Телефон,Email,Тип,Адрес,Сумма,Статус,Комментарий\n';
             
             orders.forEach(order => {
-                csv += `"${order.id || ''}";`
-                    + `"${order.orderDate || ''}";`
-                    + `"${order.userName || ''}";`
-                    + `"${order.userPhone || ''}";`
-                    + `"${order.userEmail || ''}";`
-                    + `"${order.deliveryType === 'delivery' ? 'Доставка' : 'Самовывоз'}";`
-                    + `"${order.address || ''}";`
-                    + `"${order.total || 0}";`
-                    + `"${getStatusText(order.status || 'new')}"\n`;
+                const row = [
+                    order.id || '',
+                    order.orderDate || '',
+                    order.userName || '',
+                    order.userPhone || '',
+                    order.userEmail || '',
+                    order.deliveryType === 'delivery' ? 'Доставка' : 'Самовывоз',
+                    order.address || '',
+                    order.total || 0,
+                    getOrderStatusText(order.status),
+                    order.comment || ''
+                ];
+                
+                // Экранируем кавычки и добавляем кавычки к полям
+                csv += row.map(field => `"${field.toString().replace(/"/g, '""')}"`).join(',') + '\n';
             });
             
-            // Создаем ссылку для скачивания
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
+            // Создаем Blob и скачиваем файл
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
-            link.href = url;
-            link.download = `заказы_${new Date().toISOString().split('T')[0]}.csv`;
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `sobko_orders_${new Date().toISOString().slice(0, 10)}.csv`);
+            link.style.visibility = 'hidden';
+            
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -2281,37 +2269,14 @@
             showNotification(`✅ Экспортировано ${orders.length} заказов`, 'success');
         }
         
-        // Получение текста статуса
-        function getStatusText(status) {
-            const statusMap = {
-                'new': 'Новый',
-                'processing': 'В обработке',
-                'completed': 'Завершен',
-                'cancelled': 'Отменен'
-            };
-            return statusMap[status] || 'Новый';
-        }
-        
-        // Получение цвета статуса
-        function getStatusColor(status) {
-            const colorMap = {
-                'new': '#ffd700',
-                'processing': '#3498db',
-                'completed': '#27ae60',
-                'cancelled': '#c62828'
-            };
-            return colorMap[status] || '#ffd700';
-        }
-        
-        // Обновление статистики
         function updateStatistics() {
             const orders = JSON.parse(localStorage.getItem('orders')) || [];
             const products = JSON.parse(localStorage.getItem('products')) || [];
             
-            // Основная статистика
+            // Общая статистика
             const totalOrders = orders.length;
+            const newOrders = orders.filter(o => o.status === 'new').length;
             const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
-            const newOrders = orders.filter(order => (order.status || 'new') === 'new').length;
             const avgOrder = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
             
             // Статистика за текущий месяц
@@ -2320,135 +2285,162 @@
             const currentYear = now.getFullYear();
             
             const monthlyOrders = orders.filter(order => {
-                const orderDate = new Date(order.createdAt || order.orderDate || now);
+                const orderDate = new Date(order.createdAt || order.orderDate);
                 return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
             });
             
             const monthlyRevenue = monthlyOrders.reduce((sum, order) => sum + (order.total || 0), 0);
             
-            document.getElementById('stats-total-orders').textContent = totalOrders;
-            document.getElementById('stats-total-revenue').textContent = totalRevenue + ' ₽';
-            document.getElementById('stats-new-orders').textContent = newOrders;
-            document.getElementById('stats-avg-order').textContent = avgOrder + ' ₽';
-            document.getElementById('stats-products-count').textContent = products.length;
-            document.getElementById('stats-month-revenue').textContent = monthlyRevenue + ' ₽';
-            
             // Статистика по статусам
             const statusStats = {
-                'new': 0,
-                'processing': 0,
-                'completed': 0,
-                'cancelled': 0
+                new: orders.filter(o => o.status === 'new').length,
+                processing: orders.filter(o => o.status === 'processing').length,
+                completed: orders.filter(o => o.status === 'completed').length,
+                cancelled: orders.filter(o => o.status === 'cancelled').length
             };
             
-            orders.forEach(order => {
-                const status = order.status || 'new';
-                statusStats[status] = (statusStats[status] || 0) + 1;
-            });
+            // Обновляем значения
+            document.getElementById('stats-total-orders').textContent = totalOrders;
+            document.getElementById('stats-total-revenue').textContent = totalRevenue.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('stats-new-orders').textContent = newOrders;
+            document.getElementById('stats-avg-order').textContent = avgOrder.toLocaleString('ru-RU') + ' ₽';
+            document.getElementById('stats-products-count').textContent = products.filter(p => p.isActive !== false).length;
+            document.getElementById('stats-month-revenue').textContent = monthlyRevenue.toLocaleString('ru-RU') + ' ₽';
             
-            let statusHtml = '';
-            for (const [status, count] of Object.entries(statusStats)) {
-                if (count > 0) {
-                    const percentage = totalOrders > 0 ? Math.round((count / totalOrders) * 100) : 0;
-                    statusHtml += `
-                        <div style="margin-bottom: 10px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                <span>${getStatusText(status)}</span>
-                                <span>${count} (${percentage}%)</span>
-                            </div>
-                            <div style="height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden;">
-                                <div style="height: 100%; width: ${percentage}%; background: ${getStatusColor(status)}; border-radius: 4px;"></div>
-                            </div>
+            // Обновляем статистику по статусам
+            const statusStatsContainer = document.getElementById('status-stats');
+            if (statusStatsContainer) {
+                statusStatsContainer.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 15px;">
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffd700;">
+                            <div style="font-size: 0.9rem; color: #856404;">Новые</div>
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #856404;">${statusStats.new}</div>
                         </div>
-                    `;
-                }
+                        <div style="background: #cce5ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3498db;">
+                            <div style="font-size: 0.9rem; color: #004085;">В обработке</div>
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #004085;">${statusStats.processing}</div>
+                        </div>
+                        <div style="background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #27ae60;">
+                            <div style="font-size: 0.9rem; color: #155724;">Завершенные</div>
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #155724;">${statusStats.completed}</div>
+                        </div>
+                        <div style="background: #f8d7da; padding: 15px; border-radius: 8px; border-left: 4px solid #c62828;">
+                            <div style="font-size: 0.9rem; color: #721c24;">Отмененные</div>
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #721c24;">${statusStats.cancelled}</div>
+                        </div>
+                    </div>
+                `;
             }
             
-            document.getElementById('status-stats').innerHTML = statusHtml || '<p style="color: #666; text-align: center;">Нет данных</p>';
-            
-            // Последние заказы
-            const recentOrders = orders.slice(-5).reverse();
-            let recentHtml = '';
-            
-            if (recentOrders.length === 0) {
-                recentHtml = '<p style="text-align: center; color: #666;">Нет заказов</p>';
-            } else {
-                recentOrders.forEach(order => {
-                    const statusClass = `status-${order.status || 'new'}`;
-                    recentHtml += `
-                        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid ${getStatusColor(order.status)};">
-                            <div style="display: flex; justify-content: space-between;">
-                                <strong>${order.userName || 'Гость'}</strong>
-                                <span>${order.total || 0} ₽</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.9rem;">
-                                <span>${order.orderDate || ''}</span>
-                                <span class="status-badge ${statusClass}">${getStatusText(order.status)}</span>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            
-            document.getElementById('recent-orders').innerHTML = recentHtml;
-            updateSidebarInfo();
+            // Обновляем последние заказы
+            updateRecentOrders();
         }
         
-        // Обновление информации в сайдбаре
+        function updateRecentOrders() {
+            const orders = JSON.parse(localStorage.getItem('orders')) || [];
+            const recentOrdersContainer = document.getElementById('recent-orders');
+            
+            if (orders.length === 0) {
+                recentOrdersContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666; background: #f8f9fa; border-radius: 8px;">
+                        <i class="fas fa-shopping-cart" style="font-size: 3rem; margin-bottom: 15px; color: #ddd;"></i>
+                        <h3 style="margin-bottom: 10px;">Заказов пока нет</h3>
+                        <p>Здесь будут отображаться последние заказы</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const recentOrders = orders.slice(-5).reverse(); // Последние 5 заказов
+            
+            let html = '';
+            recentOrders.forEach(order => {
+                const statusClass = `status-${order.status || 'new'}`;
+                const statusText = getOrderStatusText(order.status);
+                const itemCount = order.cart ? order.cart.reduce((sum, item) => sum + item.quantity, 0) : 0;
+                
+                html += `
+                    <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 10px; border-left: 4px solid var(--admin-green);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <div style="font-weight: bold; color: var(--admin-blue); margin-bottom: 5px;">
+                                    ${order.userName || 'Неизвестный клиент'}
+                                </div>
+                                <div style="font-size: 0.85rem; color: #666;">
+                                    ${order.orderDate || new Date(order.createdAt).toLocaleDateString('ru-RU')}
+                                    ${order.userPhone ? ' • ' + order.userPhone : ''}
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: bold; color: var(--admin-green); margin-bottom: 5px;">
+                                    ${order.total || 0} ₽
+                                </div>
+                                <span class="status-badge ${statusClass}" style="font-size: 0.75rem; padding: 2px 8px;">
+                                    ${statusText}
+                                </span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 0.85rem; color: #666; display: flex; justify-content: space-between;">
+                            <span>
+                                <i class="fas fa-box"></i> ${itemCount} товар${itemCount !== 1 ? 'ов' : ''}
+                                ${order.deliveryType === 'delivery' ? ' • <i class="fas fa-truck"></i> Доставка' : ' • <i class="fas fa-store"></i> Самовывоз'}
+                            </span>
+                            <button onclick="viewOrder('${order.id}')" style="background: none; border: none; color: var(--admin-blue); cursor: pointer; font-size: 0.8rem;">
+                                <i class="fas fa-eye"></i> Подробнее
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            recentOrdersContainer.innerHTML = html;
+        }
+        
         function updateSidebarInfo() {
             const orders = JSON.parse(localStorage.getItem('orders')) || [];
             const products = JSON.parse(localStorage.getItem('products')) || [];
-            const content = JSON.parse(localStorage.getItem('siteContent')) || {};
-            const colorScheme = JSON.parse(localStorage.getItem('colorScheme')) || {};
             
-            // Обновляем последнее обновление
-            const lastUpdate = content.lastUpdated || colorScheme.lastUpdated;
-            if (lastUpdate) {
-                const date = new Date(lastUpdate);
-                document.getElementById('last-update').textContent = 
-                    date.toLocaleString('ru-RU');
-            } else {
-                document.getElementById('last-update').textContent = 'Не обновлялось';
-            }
-            
-            // Обновляем счетчики
             document.getElementById('total-orders').textContent = orders.length;
-            document.getElementById('new-orders').textContent = orders.filter(order => (order.status || 'new') === 'new').length;
-            document.getElementById('total-products').textContent = products.length;
-            
-            // Обновляем выручку
-            const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
-            document.getElementById('total-revenue').textContent = totalRevenue + ' ₽';
+            document.getElementById('new-orders').textContent = orders.filter(o => o.status === 'new').length;
+            document.getElementById('total-products').textContent = products.filter(p => p.isActive !== false).length;
+            document.getElementById('total-revenue').textContent = orders.reduce((sum, order) => sum + (order.total || 0), 0).toLocaleString('ru-RU') + ' ₽';
         }
         
-        // Обновление живого сайта
+        function updateLastUpdate() {
+            const now = new Date();
+            const formattedDate = now.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            document.getElementById('last-update').textContent = formattedDate;
+        }
+        
         function updateLiveSite() {
-            // Добавляем флаги обновлений
+            // Сохраняем флаг, что нужно обновить сайт
             localStorage.setItem('lastContentUpdate', 'true');
-            localStorage.setItem('lastDeliveryUpdate', 'true');
-            localStorage.setItem('lastAboutUpdate', 'true');
-            localStorage.setItem('lastSettingsUpdate', 'true');
             localStorage.setItem('lastColorUpdate', 'true');
             
-            showNotification('✅ Изменения отправлены на сайт! Обновите главную страницу.', 'success');
+            showNotification('✅ Сайт будет обновлен при следующем открытии!', 'success');
         }
         
-        // Выход из админки
         function logout() {
             localStorage.removeItem('adminLoggedIn');
             window.location.href = 'index.html';
         }
         
-        // Уведомления
-        function showNotification(message, type = 'success') {
+        function showNotification(message, type = 'success', duration = 3000) {
             const notification = document.getElementById('notification');
-            notification.innerHTML = message;
+            notification.textContent = message;
             notification.className = 'notification ' + type;
             notification.style.display = 'block';
             
             setTimeout(() => {
                 notification.style.display = 'none';
-            }, 3000);
+            }, duration);
         }
     </script>
 </body>
