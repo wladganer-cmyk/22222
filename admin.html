@@ -1230,6 +1230,133 @@
     <div class="notification" id="notification"></div>
     
     <script>
+        // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
+        
+        // Ключ для хранения данных сайта
+        const SITE_DATA_KEY = 'sobko_site_data';
+        let siteData = {};
+        
+        // ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
+        
+        // Функция для загрузки данных сайта
+        function loadSiteData() {
+            const saved = localStorage.getItem(SITE_DATA_KEY);
+            if (saved) {
+                siteData = JSON.parse(saved);
+            } else {
+                // Дефолтные данные
+                siteData = {
+                    content: {},
+                    settings: {},
+                    products: [],
+                    orders: [],
+                    colorScheme: {},
+                    lastUpdated: null
+                };
+            }
+            return siteData;
+        }
+        
+        // Функция для сохранения данных сайта
+        function saveSiteData() {
+            siteData.lastUpdated = Date.now();
+            localStorage.setItem(SITE_DATA_KEY, JSON.stringify(siteData));
+            
+            // Также сохраняем в локальное хранилище для обратной совместимости
+            if (siteData.content) {
+                localStorage.setItem('siteContent', JSON.stringify(siteData.content));
+            }
+            if (siteData.settings) {
+                localStorage.setItem('storeSettings', JSON.stringify(siteData.settings));
+            }
+            if (siteData.products) {
+                localStorage.setItem('products', JSON.stringify(siteData.products));
+            }
+            if (siteData.orders) {
+                localStorage.setItem('orders', JSON.stringify(siteData.orders));
+            }
+            if (siteData.colorScheme) {
+                localStorage.setItem('colorScheme', JSON.stringify(siteData.colorScheme));
+            }
+            
+            // Отмечаем, что данные обновились
+            localStorage.setItem('site_data_updated', Date.now().toString());
+            
+            // Отправляем уведомление другим вкладкам
+            broadcastUpdate('site_data');
+        }
+        
+        // Функция для отправки уведомлений
+        function broadcastUpdate(type) {
+            // Через BroadcastChannel если доступно
+            if ('BroadcastChannel' in window) {
+                try {
+                    const channel = new BroadcastChannel('sobko_updates');
+                    channel.postMessage({
+                        type: type,
+                        timestamp: Date.now()
+                    });
+                } catch (e) {
+                    console.log('BroadcastChannel не поддерживается');
+                }
+            }
+            
+            // Через события storage
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'site_data_updated',
+                newValue: Date.now().toString()
+            }));
+        }
+        
+        // Инициализация синхронизации
+        function initSync() {
+            loadSiteData();
+            
+            // Слушаем обновления от других вкладок
+            window.addEventListener('storage', function(event) {
+                if (event.key === 'site_data_updated') {
+                    console.log('🔄 Обнаружено обновление данных сайта');
+                    // Перезагружаем данные
+                    loadSiteData();
+                    // Обновляем UI
+                    if (document.getElementById('content-section').classList.contains('active')) {
+                        loadAdminData();
+                    }
+                    if (document.getElementById('products-section').classList.contains('active')) {
+                        loadProductsForAdmin();
+                    }
+                    if (document.getElementById('orders-section').classList.contains('active')) {
+                        loadOrders();
+                    }
+                    updateSidebarInfo();
+                    updateStatistics();
+                }
+            });
+            
+            // Инициализируем Broadcast Channel
+            if ('BroadcastChannel' in window) {
+                const channel = new BroadcastChannel('sobko_updates');
+                
+                channel.onmessage = function(event) {
+                    if (event.data.type === 'site_data') {
+                        console.log('📡 Получено обновление данных сайта по Broadcast Channel');
+                        loadSiteData();
+                        // Обновляем активную секцию
+                        const activeSection = document.querySelector('.admin-section.active');
+                        if (activeSection) {
+                            if (activeSection.id === 'content-section') loadAdminData();
+                            if (activeSection.id === 'products-section') loadProductsForAdmin();
+                            if (activeSection.id === 'orders-section') loadOrders();
+                        }
+                        updateSidebarInfo();
+                        updateStatistics();
+                    }
+                };
+            }
+        }
+        
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        
         // Усиленная проверка загрузки админ-панели
         document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ Админ-панель загружена');
@@ -1264,6 +1391,8 @@
             }
             
             // Дальнейшая инициализация
+            loadSiteData();
+            initSync();
             loadAdminData();
             loadProductsForAdmin();
             loadOrders();
@@ -1323,11 +1452,14 @@
             }
         }
         
+        // ==================== УПРАВЛЕНИЕ КОНТЕНТОМ ====================
+        
         // Загрузка данных для админки
         function loadAdminData() {
-            // Загружаем сохраненный контент
-            const content = JSON.parse(localStorage.getItem('siteContent')) || {};
-            const settings = JSON.parse(localStorage.getItem('storeSettings')) || {};
+            loadSiteData();
+            
+            const content = siteData.content || {};
+            const settings = siteData.settings || {};
             
             // Заполняем форму контента
             document.getElementById('store-name').value = content.title || '';
@@ -1347,8 +1479,8 @@
             document.getElementById('newyear-hours').value = settings.newYearHours || '';
             
             // Загружаем логотип
-            const logo = localStorage.getItem('siteLogo');
-            document.getElementById('logo-url').value = logo || '';
+            const logo = content.logo || '';
+            document.getElementById('logo-url').value = logo;
             
             // Показываем текущий логотип
             const logoImg = document.getElementById('current-logo');
@@ -1366,26 +1498,27 @@
         
         // Сохранение контента
         function saveContent() {
-            const content = {
+            loadSiteData();
+            
+            siteData.content = {
                 title: document.getElementById('store-name').value,
                 description: document.getElementById('store-description').value,
                 highlight: document.getElementById('store-highlight').value,
                 aboutText: document.getElementById('about-text').value,
                 warningText: document.getElementById('warning-text').value,
-                freeDelivery: parseInt(document.getElementById('free-delivery').value),
-                deliveryCost: parseInt(document.getElementById('delivery-cost').value),
-                minOrder: parseInt(document.getElementById('min-order').value),
+                freeDelivery: parseInt(document.getElementById('free-delivery').value) || 2500,
+                deliveryCost: parseInt(document.getElementById('delivery-cost').value) || 500,
+                minOrder: parseInt(document.getElementById('min-order').value) || 1000,
                 lastUpdated: new Date().toISOString()
             };
             
             // Проверка обязательных полей
-            if (!content.title) {
+            if (!siteData.content.title) {
                 showNotification('Введите название магазина', 'error');
                 return;
             }
             
-            localStorage.setItem('siteContent', JSON.stringify(content));
-            localStorage.setItem('lastContentUpdate', 'true');
+            saveSiteData();
             
             showNotification('✅ Контент успешно сохранен!', 'success');
             updateLastUpdate();
@@ -1394,14 +1527,14 @@
         
         // Сохранение настроек
         function saveSettings() {
-            const settings = JSON.parse(localStorage.getItem('storeSettings')) || {};
+            loadSiteData();
             
-            settings.freeDelivery = parseInt(document.getElementById('free-delivery').value) || 2500;
-            settings.deliveryCost = parseInt(document.getElementById('delivery-cost').value) || 500;
-            settings.minOrder = parseInt(document.getElementById('min-order').value) || 1000;
+            siteData.settings = siteData.settings || {};
+            siteData.settings.freeDelivery = parseInt(document.getElementById('free-delivery').value) || 2500;
+            siteData.settings.deliveryCost = parseInt(document.getElementById('delivery-cost').value) || 500;
+            siteData.settings.minOrder = parseInt(document.getElementById('min-order').value) || 1000;
             
-            localStorage.setItem('storeSettings', JSON.stringify(settings));
-            localStorage.setItem('lastDeliveryUpdate', 'true');
+            saveSiteData();
             
             showNotification('✅ Настройки доставки сохранены!', 'success');
             updateLastUpdate();
@@ -1409,16 +1542,16 @@
         
         // Сохранение контактов
         function saveContacts() {
-            const settings = JSON.parse(localStorage.getItem('storeSettings')) || {};
+            loadSiteData();
             
-            settings.storePhone = document.getElementById('store-phone').value;
-            settings.newYearPhone = document.getElementById('newyear-phone').value;
-            settings.storeAddress = document.getElementById('store-address').value;
-            settings.storeHours = document.getElementById('store-hours').value;
-            settings.newYearHours = document.getElementById('newyear-hours').value;
+            siteData.settings = siteData.settings || {};
+            siteData.settings.storePhone = document.getElementById('store-phone').value;
+            siteData.settings.newYearPhone = document.getElementById('newyear-phone').value;
+            siteData.settings.storeAddress = document.getElementById('store-address').value;
+            siteData.settings.storeHours = document.getElementById('store-hours').value;
+            siteData.settings.newYearHours = document.getElementById('newyear-hours').value;
             
-            localStorage.setItem('storeSettings', JSON.stringify(settings));
-            localStorage.setItem('lastSettingsUpdate', 'true');
+            saveSiteData();
             
             showNotification('✅ Контакты сохранены!', 'success');
             updateLastUpdate();
@@ -1429,15 +1562,16 @@
             const urlInput = document.getElementById('logo-url').value.trim();
             
             if (urlInput) {
-                // Проверяем, является ли URL действительным
                 if (!isValidUrl(urlInput)) {
                     showNotification('❌ Пожалуйста, введите корректный URL', 'error');
                     return;
                 }
                 
-                // Сохраняем URL
-                localStorage.setItem('siteLogo', urlInput);
-                localStorage.setItem('lastContentUpdate', 'true');
+                loadSiteData();
+                siteData.content = siteData.content || {};
+                siteData.content.logo = urlInput;
+                
+                saveSiteData();
                 
                 // Обновляем изображение
                 document.getElementById('current-logo').src = urlInput;
@@ -1460,9 +1594,13 @@
             }
         }
         
+        // ==================== УПРАВЛЕНИЕ ЦВЕТАМИ ====================
+        
         // Загрузка текущих цветов
         function loadCurrentColors() {
-            const colorScheme = JSON.parse(localStorage.getItem('colorScheme')) || {
+            loadSiteData();
+            
+            const colorScheme = siteData.colorScheme || {
                 primary: '#c62828',
                 secondary: '#2e7d32',
                 accent: '#ffd700',
@@ -1607,11 +1745,11 @@
                 lastUpdated: new Date().toISOString()
             };
             
-            // Сохраняем в localStorage
-            localStorage.setItem('colorScheme', JSON.stringify(colorScheme));
-            localStorage.setItem('lastColorUpdate', 'true');
+            loadSiteData();
+            siteData.colorScheme = colorScheme;
+            saveSiteData();
             
-            showNotification('✅ Цветовая схема сохранена! Нажмите "Обновить сайт" в боковой панели.', 'success');
+            showNotification('✅ Цветовая схема сохранена!', 'success');
         }
         
         // Сброс цветов к стандартным
@@ -1619,6 +1757,8 @@
             applyColorScheme('christmas');
             showNotification('✅ Цвета сброшены к новогодней схеме', 'info');
         }
+        
+        // ==================== УПРАВЛЕНИЕ ТОВАРАМИ ====================
         
         // Добавление товара
         function addProduct() {
@@ -1642,7 +1782,9 @@
                 return;
             }
             
-            let products = JSON.parse(localStorage.getItem('products')) || [];
+            loadSiteData();
+            
+            let products = siteData.products || [];
             const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
             
             const newProduct = {
@@ -1658,7 +1800,9 @@
             };
             
             products.push(newProduct);
-            localStorage.setItem('products', JSON.stringify(products));
+            siteData.products = products;
+            
+            saveSiteData();
             
             // Очищаем форму
             clearProductForm();
@@ -1684,7 +1828,9 @@
         
         // Загрузка товаров для админки
         function loadProductsForAdmin() {
-            const products = JSON.parse(localStorage.getItem('products')) || [];
+            loadSiteData();
+            
+            const products = siteData.products || [];
             const container = document.getElementById('products-list');
             
             if (products.length === 0) {
@@ -1748,7 +1894,9 @@
         // Поиск товаров
         function searchProducts() {
             const searchTerm = document.getElementById('product-search').value.toLowerCase();
-            const products = JSON.parse(localStorage.getItem('products')) || [];
+            loadSiteData();
+            
+            const products = siteData.products || [];
             const container = document.getElementById('products-list');
             
             if (!searchTerm) {
@@ -1813,12 +1961,15 @@
         
         // Изменение статуса товара (активный/неактивный)
         function toggleProductStatus(productId) {
-            let products = JSON.parse(localStorage.getItem('products')) || [];
+            loadSiteData();
+            
+            let products = siteData.products || [];
             const productIndex = products.findIndex(p => p.id === productId);
             
             if (productIndex !== -1) {
                 products[productIndex].isActive = !(products[productIndex].isActive !== false);
-                localStorage.setItem('products', JSON.stringify(products));
+                siteData.products = products;
+                saveSiteData();
                 
                 const productName = products[productIndex].name;
                 const status = products[productIndex].isActive ? 'активен' : 'скрыт';
@@ -1830,7 +1981,9 @@
         
         // Редактирование товара
         function editProduct(productId) {
-            let products = JSON.parse(localStorage.getItem('products')) || [];
+            loadSiteData();
+            
+            let products = siteData.products || [];
             const product = products.find(p => p.id === productId);
             
             if (!product) {
@@ -1877,7 +2030,9 @@
                 return;
             }
             
-            let products = JSON.parse(localStorage.getItem('products')) || [];
+            loadSiteData();
+            
+            let products = siteData.products || [];
             const productIndex = products.findIndex(p => p.id === productId);
             
             if (productIndex !== -1) {
@@ -1892,7 +2047,8 @@
                     updatedAt: new Date().toISOString()
                 };
                 
-                localStorage.setItem('products', JSON.stringify(products));
+                siteData.products = products;
+                saveSiteData();
                 
                 // Возвращаем кнопку добавления
                 const addButton = document.querySelector('#products-section .btn-primary');
@@ -1914,13 +2070,16 @@
         // Удаление товара
         function deleteProduct(productId) {
             if (confirm('Вы уверены, что хотите удалить этот товар?')) {
-                let products = JSON.parse(localStorage.getItem('products')) || [];
+                loadSiteData();
+                
+                let products = siteData.products || [];
                 const productIndex = products.findIndex(p => p.id === productId);
                 
                 if (productIndex !== -1) {
                     const productName = products[productIndex].name;
                     products.splice(productIndex, 1);
-                    localStorage.setItem('products', JSON.stringify(products));
+                    siteData.products = products;
+                    saveSiteData();
                     
                     showNotification(`✅ Товар "${productName}" удален!`, 'success');
                     loadProductsForAdmin();
@@ -1929,9 +2088,13 @@
             }
         }
         
+        // ==================== УПРАВЛЕНИЕ ЗАКАЗАМИ ====================
+        
         // Загрузка заказов
         function loadOrders() {
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
+            loadSiteData();
+            
+            const orders = siteData.orders || [];
             const tbody = document.getElementById('orders-table-body');
             const ordersCount = document.getElementById('orders-count');
             
@@ -2008,7 +2171,9 @@
         }
         
         function viewOrder(orderId) {
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
+            loadSiteData();
+            
+            const orders = siteData.orders || [];
             const order = orders.find(o => o.id === orderId);
             
             if (!order) {
@@ -2132,13 +2297,16 @@
         }
         
         function updateOrderStatus(orderId, status) {
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
+            loadSiteData();
+            
+            const orders = siteData.orders || [];
             const orderIndex = orders.findIndex(o => o.id === orderId);
             
             if (orderIndex !== -1) {
                 orders[orderIndex].status = status;
                 orders[orderIndex].updatedAt = new Date().toISOString();
-                localStorage.setItem('orders', JSON.stringify(orders));
+                siteData.orders = orders;
+                saveSiteData();
                 
                 const statusText = getOrderStatusText(status);
                 showNotification(`✅ Статус заказа обновлен на "${statusText}"`, 'success');
@@ -2161,7 +2329,9 @@
         
         function searchOrders() {
             const searchTerm = document.getElementById('order-search').value.toLowerCase();
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
+            loadSiteData();
+            
+            const orders = siteData.orders || [];
             const tbody = document.getElementById('orders-table-body');
             
             if (!searchTerm) {
@@ -2225,7 +2395,9 @@
         }
         
         function exportOrders() {
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
+            loadSiteData();
+            
+            const orders = siteData.orders || [];
             
             if (orders.length === 0) {
                 showNotification('Нет заказов для экспорта', 'warning');
@@ -2269,9 +2441,13 @@
             showNotification(`✅ Экспортировано ${orders.length} заказов`, 'success');
         }
         
+        // ==================== СТАТИСТИКА ====================
+        
         function updateStatistics() {
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
-            const products = JSON.parse(localStorage.getItem('products')) || [];
+            loadSiteData();
+            
+            const orders = siteData.orders || [];
+            const products = siteData.products || [];
             
             // Общая статистика
             const totalOrders = orders.length;
@@ -2337,7 +2513,9 @@
         }
         
         function updateRecentOrders() {
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
+            loadSiteData();
+            
+            const orders = siteData.orders || [];
             const recentOrdersContainer = document.getElementById('recent-orders');
             
             if (orders.length === 0) {
@@ -2397,8 +2575,10 @@
         }
         
         function updateSidebarInfo() {
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
-            const products = JSON.parse(localStorage.getItem('products')) || [];
+            loadSiteData();
+            
+            const orders = siteData.orders || [];
+            const products = siteData.products || [];
             
             document.getElementById('total-orders').textContent = orders.length;
             document.getElementById('new-orders').textContent = orders.filter(o => o.status === 'new').length;
@@ -2420,12 +2600,12 @@
         }
         
         function updateLiveSite() {
-            // Сохраняем флаг, что нужно обновить сайт
-            localStorage.setItem('lastContentUpdate', 'true');
-            localStorage.setItem('lastColorUpdate', 'true');
+            saveSiteData();
             
-            showNotification('✅ Сайт будет обновлен при следующем открытии!', 'success');
+            showNotification('✅ Все изменения сохранены! Сайт будет обновлен для всех пользователей.', 'success');
         }
+        
+        // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
         
         function logout() {
             localStorage.removeItem('adminLoggedIn');
