@@ -27,7 +27,7 @@
         }
         
         body {
-            background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+            background: linear-gradient(135deg, var(--christmas-blue) 0%, #1e3799 100%);
             color: white;
             min-height: 100vh;
             position: relative;
@@ -608,7 +608,7 @@
         }
         
         .modal-content {
-            background: linear-gradient(135deg, #1e3799 0%, #0c2461 100%);
+            background: linear-gradient(135deg, #1e3799 0%, var(--christmas-blue) 100%);
             border-radius: 15px;
             padding: 25px;
             width: 100%;
@@ -881,7 +881,7 @@
             <!-- О нас -->
             <section class="about-section" id="about">
                 <h2><i class="fas fa-tree"></i> Сыроварня SOBKO</h2>
-                <div class="about-content">
+                <div class="about-content" id="about-content">
                     <p>Дорогие друзья! 🎅 Мы рады приветствовать вас в преддверии самого волшебного праздника - Нового Года! ❄️✨</p>
                     <p>За окном уже вовсю хозяйничает зима – снежок идет, и чувствуется, что она пришла по-настоящему! Скоро будем наряжать елочки 🎄 собирать самые вкусные новогодние угощения и создавать праздничное настроение.</p>
                     <p>Варим ремесленный сыр только из фермерского молока высокогорных пастбищ. Без использования химии и консервантов.</p>
@@ -923,21 +923,25 @@
             <section class="contacts-section" id="contacts">
                 <div class="contact-card">
                     <h3><i class="fas fa-map-marker-alt"></i> Адрес</h3>
-                    <p>Краснокамск, ул. Геофизиков, 6<br>
+                    <p id="contact-address">Краснокамск, ул. Геофизиков, 6<br>
                     ТЦ Добрыня, павильонный ряд</p>
                 </div>
 
                 <div class="contact-card">
                     <h3><i class="fas fa-phone"></i> Телефоны</h3>
-                    <p><strong>Владимир:</strong> 8-902-635-33-03</p>
-                    <p><strong>Новогодние заказы:</strong> 8-999-123-45-67</p>
+                    <p id="contact-phones">
+                        <strong>Владимир:</strong> 8-902-635-33-03<br>
+                        <strong>Новогодние заказы:</strong> 8-999-123-45-67
+                    </p>
                 </div>
 
                 <div class="contact-card">
                     <h3><i class="fas fa-clock"></i> Время работы</h3>
-                    <p><strong>Пн-Пт:</strong> 10:00 - 20:00<br>
-                    <strong>Сб-Вс:</strong> 10:00 - 18:00<br>
-                    <strong>24-31 декабря:</strong> 9:00 - 22:00</p>
+                    <p id="contact-hours">
+                        <strong>Пн-Пт:</strong> 10:00 - 20:00<br>
+                        <strong>Сб-Вс:</strong> 10:00 - 18:00<br>
+                        <strong>24-31 декабря:</strong> 9:00 - 22:00
+                    </p>
                 </div>
 
                 <div class="contact-card">
@@ -1161,10 +1165,121 @@
     </script>
 
     <script>
+        // ==================== СИНХРОНИЗАЦИЯ ДАННЫХ ====================
+        
+        // Ключ для хранения данных сайта
+        const SITE_DATA_KEY = 'sobko_site_data';
+        
+        // Функция для загрузки данных сайта
+        function loadSiteDataFromStorage() {
+            // Пробуем загрузить из общего хранилища
+            const siteData = JSON.parse(localStorage.getItem(SITE_DATA_KEY)) || {};
+            
+            // Если нет данных в общем хранилище, пробуем загрузить из старых ключей
+            if (!siteData.content || Object.keys(siteData.content).length === 0) {
+                const oldContent = JSON.parse(localStorage.getItem('siteContent')) || {};
+                const oldSettings = JSON.parse(localStorage.getItem('storeSettings')) || {};
+                const oldProducts = JSON.parse(localStorage.getItem('products')) || [];
+                const oldOrders = JSON.parse(localStorage.getItem('orders')) || [];
+                const oldColors = JSON.parse(localStorage.getItem('colorScheme')) || {};
+                
+                siteData.content = oldContent;
+                siteData.settings = oldSettings;
+                siteData.products = oldProducts;
+                siteData.orders = oldOrders;
+                siteData.colorScheme = oldColors;
+                
+                // Сохраняем обратно в общее хранилище
+                if (oldContent.title || oldProducts.length > 0) {
+                    localStorage.setItem(SITE_DATA_KEY, JSON.stringify(siteData));
+                }
+            }
+            
+            return siteData;
+        }
+        
+        // Функция для проверки и применения обновлений
+        function checkAndApplyUpdates() {
+            const lastUpdate = localStorage.getItem('site_data_updated');
+            const lastCheck = localStorage.getItem('last_data_check') || 0;
+            
+            if (lastUpdate && parseInt(lastUpdate) > parseInt(lastCheck)) {
+                console.log('🔄 Обнаружены обновления данных сайта, применяем...');
+                
+                const siteData = loadSiteDataFromStorage();
+                
+                // Обновляем контент
+                if (siteData.content && Object.keys(siteData.content).length > 0) {
+                    localStorage.setItem('siteContent', JSON.stringify(siteData.content));
+                }
+                
+                // Обновляем настройки
+                if (siteData.settings && Object.keys(siteData.settings).length > 0) {
+                    localStorage.setItem('storeSettings', JSON.stringify(siteData.settings));
+                }
+                
+                // Обновляем товары
+                if (siteData.products && siteData.products.length > 0) {
+                    localStorage.setItem('products', JSON.stringify(siteData.products));
+                }
+                
+                // Обновляем цвета
+                if (siteData.colorScheme && Object.keys(siteData.colorScheme).length > 0) {
+                    localStorage.setItem('colorScheme', JSON.stringify(siteData.colorScheme));
+                    loadColorScheme(); // Применяем новые цвета
+                }
+                
+                // Обновляем время последней проверки
+                localStorage.setItem('last_data_check', Date.now().toString());
+                
+                // Перезагружаем данные на странице
+                setTimeout(() => {
+                    loadSiteContent();
+                    loadProductsFromStorage();
+                    updateCart();
+                }, 500);
+            }
+        }
+        
+        // Функция для миграции старых данных
+        function migrateOldData() {
+            const hasOldData = localStorage.getItem('siteContent') || 
+                              localStorage.getItem('storeSettings') || 
+                              localStorage.getItem('products');
+            
+            if (hasOldData && !localStorage.getItem(SITE_DATA_KEY)) {
+                console.log('🔄 Мигрируем старые данные в новое хранилище...');
+                
+                const siteData = {
+                    content: JSON.parse(localStorage.getItem('siteContent') || '{}'),
+                    settings: JSON.parse(localStorage.getItem('storeSettings') || '{}'),
+                    products: JSON.parse(localStorage.getItem('products') || '[]'),
+                    orders: JSON.parse(localStorage.getItem('orders') || '[]'),
+                    colorScheme: JSON.parse(localStorage.getItem('colorScheme') || '{}'),
+                    lastUpdated: Date.now()
+                };
+                
+                localStorage.setItem(SITE_DATA_KEY, JSON.stringify(siteData));
+                localStorage.setItem('site_data_updated', Date.now().toString());
+                
+                console.log('✅ Миграция данных завершена');
+            }
+        }
+        
+        // ==================== ЦВЕТОВАЯ СХЕМА ====================
+        
         // Загрузка цветовой схемы из localStorage
         function loadColorScheme() {
-            const colorScheme = JSON.parse(localStorage.getItem('colorScheme')) || {};
+            // Загружаем из общего хранилища
+            const siteData = loadSiteDataFromStorage();
+            const colorScheme = siteData.colorScheme || {
+                primary: '#c62828',
+                secondary: '#2e7d32',
+                accent: '#ffd700',
+                background: '#0c2461'
+            };
             
+            // Применяем цвета ко всем CSS переменным
             if (colorScheme.primary) {
                 document.documentElement.style.setProperty('--christmas-red', colorScheme.primary);
             }
@@ -1177,11 +1292,73 @@
             if (colorScheme.background) {
                 document.documentElement.style.setProperty('--christmas-blue', colorScheme.background);
             }
+            
+            // Применяем цвета к динамическим элементам
+            applyDynamicColors(colorScheme);
         }
+        
+        // Применение цветов к динамическим элементам
+        function applyDynamicColors(colorScheme) {
+            // Обновляем фон body
+            document.body.style.background = `linear-gradient(135deg, ${colorScheme.background || '#0c2461'} 0%, #1e3799 100%)`;
+            
+            // Обновляем заголовки
+            document.querySelectorAll('.header').forEach(header => {
+                header.style.background = `linear-gradient(135deg, ${colorScheme.primary || '#c62828'} 0%, ${colorScheme.secondary || '#2e7d32'} 100%)`;
+            });
+            
+            // Обновляем кнопки с градиентами
+            document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+                btn.style.background = `linear-gradient(to right, ${colorScheme.primary || '#c62828'}, ${colorScheme.secondary || '#2e7d32'})`;
+            });
+            
+            document.querySelectorAll('.checkout-btn:not(:disabled)').forEach(btn => {
+                btn.style.background = `linear-gradient(to right, ${colorScheme.secondary || '#2e7d32'}, #27ae60)`;
+            });
+            
+            // Обновляем рамки
+            document.querySelectorAll('.product-card, .cart-card, .about-section, .delivery-card, .contact-card').forEach(element => {
+                element.style.borderColor = colorScheme.accent || '#ffd700';
+            });
+            
+            // Обновляем цвет текста в выделенных блоках
+            document.querySelectorAll('.highlight').forEach(element => {
+                element.style.color = colorScheme.accent || '#ffd700';
+                element.style.borderColor = colorScheme.accent || '#ffd700';
+            });
+            
+            // Обновляем навигацию
+            document.querySelectorAll('.nav').forEach(nav => {
+                nav.style.borderBottomColor = colorScheme.accent || '#ffd700';
+            });
+            
+            // Обновляем футер
+            document.querySelectorAll('.footer').forEach(footer => {
+                footer.style.borderTopColor = colorScheme.accent || '#ffd700';
+            });
+            
+            // Обновляем модальные окна
+            document.querySelectorAll('.modal-content').forEach(modal => {
+                modal.style.borderColor = colorScheme.accent || '#ffd700';
+            });
+            
+            // Обновляем кнопки пользователя
+            document.querySelectorAll('.user-btn').forEach(btn => {
+                if (btn.style.background.includes('var(--christmas-blue)')) {
+                    btn.style.background = colorScheme.background || '#0c2461';
+                }
+            });
+        }
+        
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
         
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
-            loadColorScheme(); // Загружаем цветовую схему
+            // Миграция данных
+            migrateOldData();
+            
+            // Загружаем и применяем данные
+            loadColorScheme();
             createSnowflakes();
             loadSiteContent();
             initAuth();
@@ -1194,6 +1371,12 @@
             
             // Исправление кнопки подтверждения заказа
             fixOrderButton();
+            
+            // Проверяем обновления данных
+            checkAndApplyUpdates();
+            
+            // Запускаем периодическую проверку
+            setInterval(checkAndApplyUpdates, 3000);
         });
         
         // Создание снежинок
@@ -1245,10 +1428,15 @@
             showModal('cart-modal');
         }
         
+        // ==================== КОНТЕНТ САЙТА ====================
+        
         // Загрузка контента сайта
         function loadSiteContent() {
-            const content = JSON.parse(localStorage.getItem('siteContent')) || {};
-            const settings = JSON.parse(localStorage.getItem('storeSettings')) || {};
+            // Загружаем из общего хранилища
+            const siteData = loadSiteDataFromStorage();
+            
+            const content = siteData.content || {};
+            const settings = siteData.settings || {};
             
             // Заголовки и описания
             if (content.title) {
@@ -1293,7 +1481,7 @@
             
             // Текст "О нас"
             if (content.aboutText) {
-                const aboutSection = document.querySelector('.about-content');
+                const aboutSection = document.getElementById('about-content');
                 if (aboutSection) {
                     // Разделяем текст на параграфы
                     const paragraphs = content.aboutText.split('\n\n').filter(p => p.trim());
@@ -1316,81 +1504,46 @@
                 }
             }
             
-            // Настройки магазина (контакты)
-            if (settings.storePhone) {
-                const contactsSection = document.querySelector('.contacts-section');
-                if (contactsSection) {
-                    const phoneElements = contactsSection.querySelectorAll('p');
-                    phoneElements.forEach(p => {
-                        if (p.textContent.includes('Владимир:')) {
-                            p.innerHTML = `<strong>Владимир:</strong> ${settings.storePhone}`;
-                        }
-                    });
-                }
-            }
-            
-            if (settings.newYearPhone) {
-                const contactsSection = document.querySelector('.contacts-section');
-                if (contactsSection) {
-                    const phoneElements = contactsSection.querySelectorAll('p');
-                    phoneElements.forEach(p => {
-                        if (p.textContent.includes('Новогодние заказы:')) {
-                            p.innerHTML = `<strong>Новогодние заказы:</strong> ${settings.newYearPhone}`;
-                        }
-                    });
-                }
-            }
-            
-            if (settings.storeAddress) {
-                const contactsSection = document.querySelector('.contacts-section');
-                if (contactsSection) {
-                    const addressElements = contactsSection.querySelectorAll('p');
-                    addressElements.forEach(p => {
-                        if (p.textContent.includes('Краснокамск')) {
-                            p.innerHTML = settings.storeAddress.replace(/\n/g, '<br>');
-                        }
-                    });
-                }
-            }
-            
-            if (settings.storeHours) {
-                const contactsSection = document.querySelector('.contacts-section');
-                if (contactsSection) {
-                    const hoursElements = contactsSection.querySelectorAll('p');
-                    hoursElements.forEach(p => {
-                        if (p.textContent.includes('Пн-Пт:')) {
-                            p.innerHTML = settings.storeHours.replace(/\n/g, '<br>');
-                        }
-                    });
-                }
-            }
-            
-            if (settings.newYearHours) {
-                const contactsSection = document.querySelector('.contacts-section');
-                if (contactsSection) {
-                    const newYearElements = contactsSection.querySelectorAll('p');
-                    newYearElements.forEach(p => {
-                        if (p.textContent.includes('24-31 декабря:')) {
-                            const parentDiv = p.closest('.contact-card');
-                            if (parentDiv) {
-                                const paragraphs = parentDiv.querySelectorAll('p');
-                                if (paragraphs.length >= 3) {
-                                    paragraphs[2].innerHTML = `<strong>Новогодний график:</strong><br>${settings.newYearHours}`;
-                                }
-                            }
-                        }
-                    });
-                }
-            }
+            // Контактная информация
+            updateContactInfo(content, settings);
             
             // Загрузка логотипа
-            const logo = localStorage.getItem('siteLogo');
+            const logo = content.logo || localStorage.getItem('siteLogo');
             const logoElement = document.getElementById('site-logo');
             if (logo && logoElement) {
                 logoElement.src = logo;
                 logoElement.style.display = 'block';
             } else {
                 logoElement.style.display = 'none';
+            }
+        }
+        
+        // Обновление контактной информации
+        function updateContactInfo(content, settings) {
+            // Адрес
+            if (content.storeAddress || settings.storeAddress) {
+                const address = content.storeAddress || settings.storeAddress;
+                document.getElementById('contact-address').innerHTML = address.replace(/\n/g, '<br>');
+            }
+            
+            // Телефоны
+            let phonesHtml = '';
+            if (content.storePhone || settings.storePhone) {
+                const phone = content.storePhone || settings.storePhone;
+                phonesHtml += `<strong>Владимир:</strong> ${phone}<br>`;
+            }
+            if (content.newYearPhone || settings.newYearPhone) {
+                const newYearPhone = content.newYearPhone || settings.newYearPhone;
+                phonesHtml += `<strong>Новогодние заказы:</strong> ${newYearPhone}`;
+            }
+            if (phonesHtml) {
+                document.getElementById('contact-phones').innerHTML = phonesHtml;
+            }
+            
+            // Часы работы
+            if (content.storeHours || settings.storeHours) {
+                const hours = content.storeHours || settings.storeHours;
+                document.getElementById('contact-hours').innerHTML = hours.replace(/\n/g, '<br>');
             }
         }
         
@@ -1414,7 +1567,8 @@
             }
         }
         
-        // Аутентификация
+        // ==================== АУТЕНТИФИКАЦИЯ ====================
+        
         let currentUser = null;
         
         function initAuth() {
@@ -1563,7 +1717,8 @@
             showAuthButtons();
         }
         
-        // Модальные окна
+        // ==================== МОДАЛЬНЫЕ ОКНА ====================
+        
         function showModal(modalId) {
             closeAllModals();
             const modal = document.getElementById(modalId);
@@ -1625,14 +1780,15 @@
             showModal('profile-modal');
         }
         
-        // Улучшенная функция загрузки истории заказов
+        // Загрузка истории заказов пользователя
         async function loadUserOrders() {
             if (!currentUser) return;
             
             try {
-                const orders = JSON.parse(localStorage.getItem('orders')) || [];
+                const siteData = loadSiteDataFromStorage();
+                const orders = siteData.orders || [];
+                
                 const userOrders = orders.filter(order => {
-                    // Проверяем по email или ID пользователя
                     const userEmail = currentUser.email || '';
                     const orderEmail = order.userEmail || '';
                     return orderEmail.toLowerCase() === userEmail.toLowerCase() || 
@@ -1701,9 +1857,30 @@
             }
         }
         
+        function getOrderStatusText(status) {
+            const statusMap = {
+                'new': 'Новый',
+                'processing': 'В обработке',
+                'completed': 'Завершен',
+                'cancelled': 'Отменен'
+            };
+            return statusMap[status] || 'Новый';
+        }
+        
+        function getOrderStatusColor(status) {
+            const colorMap = {
+                'new': '#ffd700',
+                'processing': '#3498db',
+                'completed': '#27ae60',
+                'cancelled': '#c62828'
+            };
+            return colorMap[status] || '#ffd700';
+        }
+        
         // Просмотр деталей заказа пользователем
         function viewUserOrder(orderId) {
-            const orders = JSON.parse(localStorage.getItem('orders')) || [];
+            const siteData = loadSiteDataFromStorage();
+            const orders = siteData.orders || [];
             const order = orders.find(o => o.id === orderId);
             
             if (!order) {
@@ -1735,7 +1912,7 @@
             
             const modalHtml = `
                 <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 20px;">
-                    <div style="background: linear-gradient(135deg, #1e3799 0%, #0c2461 100%); border-radius: 15px; padding: 25px; max-width: 500px; width: 100%; border: 3px solid var(--christmas-gold); box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);">
+                    <div style="background: linear-gradient(135deg, #1e3799 0%, var(--christmas-blue) 100%); border-radius: 15px; padding: 25px; max-width: 500px; width: 100%; border: 3px solid var(--christmas-gold); box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h2 style="color: var(--christmas-gold); margin: 0;">
                                 <i class="fas fa-receipt"></i> Заказ #${orderId.substring(0, 8)}
@@ -1793,31 +1970,13 @@
             if (modal) modal.remove();
         }
         
-        function getOrderStatusText(status) {
-            const statusMap = {
-                'new': 'Новый',
-                'processing': 'В обработке',
-                'completed': 'Завершен',
-                'cancelled': 'Отменен'
-            };
-            return statusMap[status] || 'Новый';
-        }
+        // ==================== ТОВАРЫ И КОРЗИНА ====================
         
-        function getOrderStatusColor(status) {
-            const colorMap = {
-                'new': '#ffd700',
-                'processing': '#3498db',
-                'completed': '#27ae60',
-                'cancelled': '#c62828'
-            };
-            return colorMap[status] || '#ffd700';
-        }
-        
-        // Товары и корзина
         let cart = JSON.parse(localStorage.getItem('cart')) || [];
         
         function loadProductsFromStorage() {
-            let products = JSON.parse(localStorage.getItem('products'));
+            const siteData = loadSiteDataFromStorage();
+            let products = siteData.products || [];
             
             if (!products || products.length === 0) {
                 products = [
@@ -1828,7 +1987,8 @@
                         price: 590,
                         weight: "150 гр",
                         image: "",
-                        category: "cheese"
+                        category: "cheese",
+                        isActive: true
                     },
                     {
                         id: 2,
@@ -1837,7 +1997,8 @@
                         price: 320,
                         weight: "200 гр",
                         image: "",
-                        category: "cheese"
+                        category: "cheese",
+                        isActive: true
                     },
                     {
                         id: 3,
@@ -1846,7 +2007,8 @@
                         price: 450,
                         weight: "150 гр",
                         image: "",
-                        category: "cheese"
+                        category: "cheese",
+                        isActive: true
                     },
                     {
                         id: 4,
@@ -1855,13 +2017,17 @@
                         price: 380,
                         weight: "180 гр",
                         image: "",
-                        category: "cheese"
+                        category: "cheese",
+                        isActive: true
                     }
                 ];
-                localStorage.setItem('products', JSON.stringify(products));
+                
+                // Сохраняем дефолтные товары
+                siteData.products = products;
+                localStorage.setItem(SITE_DATA_KEY, JSON.stringify(siteData));
             }
             
-            displayProducts(products);
+            displayProducts(products.filter(p => p.isActive !== false));
         }
         
         function displayProducts(products) {
@@ -1872,7 +2038,7 @@
                 const productCard = document.createElement('div');
                 productCard.className = 'product-card';
                 productCard.innerHTML = `
-                    <div class="product-image" style="background-image: ${product.image ? 'url(' + product.image + ')' : 'linear-gradient(135deg, #c62828, #2e7d32)'};">
+                    <div class="product-image" style="background-image: ${product.image ? 'url(' + product.image + ')' : 'linear-gradient(135deg, var(--christmas-red), var(--christmas-green))'};">
                         ${!product.image ? '<i class="fas fa-cheese" style="font-size: 2.5rem; z-index: 2;"></i>' : ''}
                     </div>
                     <div class="product-info">
@@ -1964,7 +2130,7 @@
                 cartItem.className = 'cart-item';
                 cartItem.innerHTML = `
                     <div style="display: flex; align-items: center; flex-grow: 1; min-width: 0;">
-                        ${item.image ? `<img src="${item.image}" class="cart-item-image">` : '<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #c62828, #2e7d32); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 8px;"><i class="fas fa-cheese"></i></div>'}
+                        ${item.image ? `<img src="${item.image}" class="cart-item-image">` : '<div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--christmas-red), var(--christmas-green)); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 8px;"><i class="fas fa-cheese"></i></div>'}
                         <div style="min-width: 0;">
                             <div style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
                             <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">${item.price} ₽/шт</div>
@@ -1974,7 +2140,7 @@
                         <button class="quantity-btn" onclick="changeQuantity(${index}, -1)">-</button>
                         <span style="min-width: 24px; text-align: center; font-weight: bold;">${item.quantity}</span>
                         <button class="quantity-btn" onclick="changeQuantity(${index}, 1)">+</button>
-                        <button onclick="removeFromCart(${index})" style="background: #c62828; color: white; border: none; border-radius: 4px; padding: 4px 8px; margin-left: 5px; cursor: pointer; font-size: 0.75rem;">
+                        <button onclick="removeFromCart(${index})" style="background: var(--christmas-red); color: white; border: none; border-radius: 4px; padding: 4px 8px; margin-left: 5px; cursor: pointer; font-size: 0.75rem;">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -1986,7 +2152,8 @@
             });
             
             // Расчет доставки
-            const content = JSON.parse(localStorage.getItem('siteContent')) || {};
+            const siteData = loadSiteDataFromStorage();
+            const content = siteData.content || {};
             const freeDelivery = content.freeDelivery || 2500;
             const deliveryCost = content.deliveryCost || 500;
             const minOrder = content.minOrder || 1000;
@@ -2042,7 +2209,7 @@
                 cartItem.className = 'cart-item';
                 cartItem.innerHTML = `
                     <div style="display: flex; align-items: center; flex-grow: 1; min-width: 0;">
-                        ${item.image ? `<img src="${item.image}" class="cart-item-image">` : '<div style="width: 40px; height: 40px; background: linear-gradient(135deg, #c62828, #2e7d32); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 8px;"><i class="fas fa-cheese"></i></div>'}
+                        ${item.image ? `<img src="${item.image}" class="cart-item-image">` : '<div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--christmas-red), var(--christmas-green)); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 8px;"><i class="fas fa-cheese"></i></div>'}
                         <div style="min-width: 0;">
                             <div style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
                             <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">${item.price} ₽/шт</div>
@@ -2052,7 +2219,7 @@
                         <button class="quantity-btn" onclick="changeQuantity(${index}, -1)">-</button>
                         <span style="min-width: 24px; text-align: center; font-weight: bold;">${item.quantity}</span>
                         <button class="quantity-btn" onclick="changeQuantity(${index}, 1)">+</button>
-                        <button onclick="removeFromCart(${index})" style="background: #c62828; color: white; border: none; border-radius: 4px; padding: 4px 8px; margin-left: 5px; cursor: pointer; font-size: 0.75rem;">
+                        <button onclick="removeFromCart(${index})" style="background: var(--christmas-red); color: white; border: none; border-radius: 4px; padding: 4px 8px; margin-left: 5px; cursor: pointer; font-size: 0.75rem;">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -2103,7 +2270,8 @@
             }
             
             const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const content = JSON.parse(localStorage.getItem('siteContent')) || {};
+            const siteData = loadSiteDataFromStorage();
+            const content = siteData.content || {};
             const minOrder = content.minOrder || 1000;
             
             if (total < minOrder) {
@@ -2161,7 +2329,8 @@
             const deliveryType = document.getElementById('delivery-type').value;
             const addressField = document.getElementById('address-field');
             const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const content = JSON.parse(localStorage.getItem('siteContent')) || {};
+            const siteData = loadSiteDataFromStorage();
+            const content = siteData.content || {};
             const freeDelivery = content.freeDelivery || 2500;
             const deliveryCost = content.deliveryCost || 500;
             
@@ -2177,7 +2346,7 @@
                     Тип получения: <span style="color: var(--christmas-gold);">Доставка</span><br>
                     ${total >= freeDelivery ? 
                         `🎁 Поздравляем! Ваш заказ от ${freeDelivery}₽, доставка <span style="color: #27ae60;">БЕСПЛАТНО!</span><br>` :
-                        `Доставка: <span style="color: #ffd700;">${deliveryCost} ₽</span> (бесплатно от ${freeDelivery}₽)<br>`
+                        `Доставка: <span style="color: var(--christmas-gold);">${deliveryCost} ₽</span> (бесплатно от ${freeDelivery}₽)<br>`
                     }
                     <span style="font-size: 1.1rem; color: var(--christmas-gold);">К оплате: ${finalTotal} ₽</span>
                 `;
@@ -2233,7 +2402,8 @@
                 }
                 
                 const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                const content = JSON.parse(localStorage.getItem('siteContent')) || {};
+                const siteData = loadSiteDataFromStorage();
+                const content = siteData.content || {};
                 const freeDelivery = content.freeDelivery || 2500;
                 const deliveryCost = content.deliveryCost || 500;
                 
@@ -2272,7 +2442,15 @@
                 };
                 
                 try {
-                    // Сохраняем заказ в localStorage
+                    // Сохраняем заказ в общее хранилище
+                    const updatedSiteData = loadSiteDataFromStorage();
+                    updatedSiteData.orders = updatedSiteData.orders || [];
+                    updatedSiteData.orders.push(orderData);
+                    
+                    localStorage.setItem(SITE_DATA_KEY, JSON.stringify(updatedSiteData));
+                    localStorage.setItem('site_data_updated', Date.now().toString());
+                    
+                    // Также сохраняем для обратной совместимости
                     const orders = JSON.parse(localStorage.getItem('orders')) || [];
                     orders.push(orderData);
                     localStorage.setItem('orders', JSON.stringify(orders));
@@ -2320,7 +2498,8 @@
             console.log('✅ Обработчик кнопки "Подтвердить заказ" установлен');
         }
         
-        // Уведомления
+        // ==================== УВЕДОМЛЕНИЯ ====================
+        
         function showNotification(message, type = 'success', duration = 3000) {
             const notification = document.getElementById('notification');
             notification.innerHTML = message;
@@ -2332,7 +2511,8 @@
             }, duration);
         }
         
-        // Настройка обработчиков событий
+        // ==================== ОБРАБОТЧИКИ СОБЫТИЙ ====================
+        
         function setupEventListeners() {
             // Закрытие модальных окон при клике вне их
             window.onclick = function(event) {
@@ -2369,6 +2549,26 @@
                 } catch (e) {
                     console.log('Не удалось загрузить сохраненного пользователя');
                 }
+            }
+            
+            // Слушаем обновления данных
+            window.addEventListener('storage', function(event) {
+                if (event.key === 'site_data_updated') {
+                    console.log('🔄 Получено уведомление об обновлении данных сайта');
+                    checkAndApplyUpdates();
+                }
+            });
+            
+            // Инициализируем Broadcast Channel если доступен
+            if ('BroadcastChannel' in window) {
+                const updateChannel = new BroadcastChannel('sobko_updates');
+                
+                updateChannel.onmessage = function(event) {
+                    if (event.data.type === 'site_data') {
+                        console.log('📡 Получено обновление данных по Broadcast Channel');
+                        checkAndApplyUpdates();
+                    }
+                };
             }
         }
         
