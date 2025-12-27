@@ -1,0 +1,76 @@
+[
+    {
+        "id": 1,
+        "name": "Голень индейки в/к",
+        "category": "new",
+        "weight": "100 гр",
+        "price": 90,
+        "image": "assets/images/products/turkey-leg.jpg",
+        "description": "Вкусная копченая голень индейки",
+        "isNew": true
+    },
+    {
+        "id": 2,
+        "name": "Орешки со сгущенкой",
+        "category": "new",
+        "weight": "100 гр",
+        "price": 180,
+        "image": "assets/images/products/nuts.jpg",
+        "description": "Хрустящие орешки с нежной сгущенкой",
+        "isNew": true
+    },
+    {
+        "id": 3,
+        "name": "Тамбовский окорок г/к",
+        "category": "meat",
+        "weight": "100 гр",
+        "price": 150,
+        "image": "assets/images/products/ham.jpg",
+        "description": "Традиционный тамбовский окорок"
+    },
+    {
+        "id": 4,
+        "name": "Буррата",
+        "category": "cheese",
+        "weight": "100 гр",
+        "price": 220,
+        "image": "assets/images/products/burrata.jpg",
+        "description": "Итальянский сыр с нежной кремовой текстурой"
+    },
+    {
+        "id": 5,
+        "name": "Пармезан 2 года",
+        "category": "cheese",
+        "weight": "100 гр",
+        "price": 490,
+        "image": "assets/images/products/parmesan.jpg",
+        "description": "Выдержанный итальянский пармезан"
+    },
+    {
+        "id": 6,
+        "name": "Сырная тарелка",
+        "category": "cheese",
+        "weight": "100 гр",
+        "price": 350,
+        "image": "assets/images/products/cheese-plate.jpg",
+        "description": "Ассорти из лучших сыров"
+    },
+    {
+        "id": 7,
+        "name": "Молоко",
+        "category": "milk",
+        "weight": "1 л",
+        "price": 180,
+        "image": "assets/images/products/milk.jpg",
+        "description": "Натуральное фермерское молоко"
+    },
+    {
+        "id": 8,
+        "name": "Творожные сырки в бельгийском шоколаде",
+        "category": "dessert",
+        "weight": "1 шт/100 гр",
+        "price": 260,
+        "image": "assets/images/products/cheese-bars.jpg",
+        "description": "Нежные творожные сырки в шоколадной глазури"
+    }
+]

@@ -1,0 +1,90 @@
+[
+    {
+        "id": 1,
+        "name": "Пармезан Новогодний 2 года",
+        "category": "cheese",
+        "weight": "150 гр",
+        "price": 590,
+        "image": "",
+        "description": "Выдержанный 2 года, идеален для праздничной тарелки",
+        "isNew": true,
+        "isActive": true
+    },
+    {
+        "id": 2,
+        "name": "Буррата Снежная",
+        "category": "cheese",
+        "weight": "200 гр",
+        "price": 320,
+        "image": "",
+        "description": "Нежнейший сыр с кремовой начинкой",
+        "isNew": true,
+        "isActive": true
+    },
+    {
+        "id": 3,
+        "name": "Гауда Золотая",
+        "category": "cheese",
+        "weight": "150 гр",
+        "price": 450,
+        "image": "",
+        "description": "С легкой карамельной ноткой и ореховым послевкусием",
+        "isNew": false,
+        "isActive": true
+    },
+    {
+        "id": 4,
+        "name": "Камамбер Праздничный",
+        "category": "cheese",
+        "weight": "180 гр",
+        "price": 380,
+        "image": "",
+        "description": "С белой плесенью и нежной текстурой",
+        "isNew": false,
+        "isActive": true
+    },
+    {
+        "id": 5,
+        "name": "Голень индейки в/к",
+        "category": "meat",
+        "weight": "100 гр",
+        "price": 90,
+        "image": "",
+        "description": "Вкусная копченая голень индейки",
+        "isNew": false,
+        "isActive": true
+    },
+    {
+        "id": 6,
+        "name": "Орешки со сгущенкой",
+        "category": "dessert",
+        "weight": "100 гр",
+        "price": 180,
+        "image": "",
+        "description": "Хрустящие орешки с нежной сгущенкой",
+        "isNew": true,
+        "isActive": true
+    },
+    {
+        "id": 7,
+        "name": "Молоко фермерское",
+        "category": "milk",
+        "weight": "1 л",
+        "price": 180,
+        "image": "",
+        "description": "Натуральное фермерское молоко",
+        "isNew": false,
+        "isActive": true
+    },
+    {
+        "id": 8,
+        "name": "Новогодний сырный набор",
+        "category": "gift",
+        "weight": "500 гр",
+        "price": 1200,
+        "image": "",
+        "description": "Ассорти из лучших сыров для праздничного стола",
+        "isNew": true,
+        "isActive": true
+    }
+]
