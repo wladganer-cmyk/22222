@@ -914,25 +914,119 @@
                     </button>
                 </div>
                 
-                <div class="admin-card">
-                    <h2><i class="fas fa-image"></i> Логотип сайта</h2>
-                    
-                    <div class="form-group">
-                        <label>URL логотипа</label>
-                        <input type="text" id="logo-url" class="form-control" placeholder="https://example.com/logo.png">
-                        <small style="color: #666; display: block; margin-top: 5px;">Вставьте прямую ссылку на изображение (PNG, JPG, SVG)</small>
-                    </div>
-                    
-                    <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
-                        <p style="margin: 0 0 10px 0; color: #666;">Текущий логотип:</p>
-                        <img id="current-logo" src="" alt="Текущий логотип" style="max-width: 200px; max-height: 100px; border: 1px solid #ddd; padding: 10px; background: white;">
-                    </div>
-                    
-                    <button class="btn btn-primary" onclick="saveLogo()" style="margin-top: 15px;">
-                        <i class="fas fa-upload"></i> Сохранить логотип
-                    </button>
-                </div>
-            </section>
+<div class="admin-card">
+    <h2><i class="fas fa-image"></i> Логотип сайта</h2>
+    
+    <div class="form-group">
+        <label>URL логотипа</label>
+        
+        <!-- ОБНОВЛЕННЫЙ БЛОК С ВВОДОМ И КНОПКАМИ -->
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <!-- ПОЛЕ ВВОДА -->
+            <div style="flex: 1;">
+                <input type="text" id="logo-url" class="form-control" placeholder="https://example.com/logo.png">
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    Вставьте прямую ссылку на изображение (PNG, JPG, SVG, WebP) или Data URL
+                </small>
+            </div>
+            
+            <!-- КНОПКИ -->
+            <div style="display: flex; gap: 5px;">
+                <!-- КНОПКА ПРОВЕРКИ -->
+                <button onclick="testLogoUrl()" 
+                        style="
+                            background: #2196F3; 
+                            color: white; 
+                            border: none; 
+                            padding: 8px 12px; 
+                            border-radius: 4px; 
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 5px;">
+                    <i class="fas fa-vial"></i> Проверить
+                </button>
+                
+                <!-- КНОПКА СОХРАНЕНИЯ -->
+                <button onclick="saveLogo()" 
+                        style="
+                            background: #4CAF50; 
+                            color: white; 
+                            border: none; 
+                            padding: 8px 12px; 
+                            border-radius: 4px; 
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 5px;">
+                    <i class="fas fa-save"></i> Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- УЛУЧШЕННЫЙ БЛОК ПРЕДПРОСМОТРА -->
+    <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <p style="margin: 0; color: #666; font-weight: bold;">Предпросмотр логотипа:</p>
+            <div style="font-size: 12px; color: #666; background: #e9ecef; padding: 4px 8px; border-radius: 4px;">
+                Статус: <span id="logo-status-text">не проверен</span>
+            </div>
+        </div>
+        
+        <!-- ОБЛАСТЬ ПРЕДПРОСМОТРА -->
+        <div id="logo-preview-area" 
+             style="
+                text-align: center; 
+                padding: 20px; 
+                border: 2px dashed #ccc; 
+                background: white; 
+                border-radius: 4px; 
+                min-height: 120px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center;">
+            
+            <!-- АКТИВНЫЙ ЛОГОТИП (ПОКАЗЫВАЕТСЯ ПРИ УСПЕШНОЙ ЗАГРУЗКЕ) -->
+            <img id="current-logo" 
+                 src="" 
+                 alt="Логотип" 
+                 style="
+                    max-width: 200px; 
+                    max-height: 80px; 
+                    display: none; 
+                    object-fit: contain;">
+            
+            <!-- ПЛЕЙСХОЛДЕР (ПОКАЗЫВАЕТСЯ КОГДА ЛОГОТИПА НЕТ) -->
+            <div id="logo-placeholder" style="color: #999;">
+                <i class="fas fa-image" style="font-size: 2rem; display: block; margin-bottom: 10px; opacity: 0.5;"></i>
+                <span>Логотип не загружен</span>
+            </div>
+        </div>
+        
+        <!-- ИНФОРМАЦИЯ О ЛОГОТИПЕ -->
+        <div style="margin-top: 10px; font-size: 12px; color: #666;">
+            <div style="display: flex; justify-content: space-between;">
+                <span id="logo-dimensions">Размер: не определен</span>
+                <span id="logo-type">Тип: не определен</span>
+                <span id="logo-size">Вес: не определен</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- СОВЕТЫ -->
+    <div style="margin-top: 15px; padding: 12px; background: #e8f4fd; border-radius: 6px; border-left: 4px solid #2196F3;">
+        <p style="margin: 0 0 8px 0; color: #0c5460; font-weight: bold;">
+            <i class="fas fa-lightbulb"></i> Советы:
+        </p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #0c5460;">
+            <li>Для лучшего качества используйте PNG с прозрачным фоном</li>
+            <li>Рекомендуемый размер: 200×80 пикселей</li>
+            <li>Всегда проверяйте загрузку перед сохранением</li>
+            <li>Изображение должно быть оптимизировано для веба</li>
+        </ul>
+    </div>
+</div>
             
             <!-- Секция управления товарами -->
             <section id="products-section" class="admin-section">
@@ -1490,142 +1584,479 @@
             updateLastUpdate();
         }
         
-        // ==================== СОХРАНЕНИЕ ДАННЫХ ====================
+// ==================== УСИЛЕННОЕ СОХРАНЕНИЕ ДАННЫХ ====================
         
-        async function saveSiteData() {
-            console.log('💾 Сохранение данных...');
+async function saveSiteData() {
+    console.log('💾 УСИЛЕННОЕ Сохранение данных сайта...');
+    
+    // Увеличиваем версию синхронизации
+    siteData.syncVersion = (siteData.syncVersion || 0) + 1;
+    siteData.lastUpdated = new Date().toISOString();
+    siteData.lastUpdatedBy = 'admin';
+    
+    console.log('📊 Версия данных:', siteData.syncVersion);
+    console.log('Данные для сохранения:', {
+        title: siteData.content?.title,
+        products: siteData.products?.length,
+        lastUpdated: siteData.lastUpdated
+    });
+    
+    // 1. Сохраняем локально (самое важное!)
+    localStorage.setItem(SITE_DATA_KEY, JSON.stringify(siteData));
+    console.log('✅ Данные сохранены локально');
+    
+    // 2. Сохраняем в Firebase
+    let savedToFirebase = false;
+    let firebaseError = null;
+    
+    if (checkFirebaseConnection()) {
+        try {
+            console.log('🔥 Пытаюсь сохранить в Firebase...');
             
-            // Обновляем время изменения
-            siteData.lastUpdated = new Date().toISOString();
+            // Добавляем метку времени сервера
+            const dataToSave = {
+                ...siteData,
+                serverUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                syncStatus: 'synced',
+                forceUpdate: Date.now() // Добавляем force для гарантии обновления
+            };
             
-            // Сохраняем локально
-            localStorage.setItem(SITE_DATA_KEY, JSON.stringify(siteData));
+            // Важно: используем set с {merge: true} для полной перезаписи
+            await db.collection('siteData').doc('sobkoStore').set(dataToSave, { merge: true });
+            savedToFirebase = true;
+            console.log('✅✅✅ Данные успешно сохранены в Firebase!');
             
-            // Сохраняем в Firebase (если доступен)
-            const savedToFirebase = await saveToFirebase('siteData', 'sobkoStore', siteData);
+            // ОБЯЗАТЕЛЬНО: уведомляем клиентов об обновлении
+            await notifyClientsAboutUpdate('site_data');
             
-            if (savedToFirebase) {
-                console.log('✅ Данные сохранены в Firebase');
-                return true;
-            } else {
-                console.log('📁 Данные сохранены локально (очередь синхронизации)');
-                return false;
-            }
+            // Отправляем уведомление другим вкладкам
+            broadcastUpdate({
+                type: 'data_updated',
+                data: siteData,
+                timestamp: Date.now(),
+                source: 'admin',
+                syncVersion: siteData.syncVersion
+            });
+            
+        } catch (error) {
+            console.error('❌ ОШИБКА сохранения в Firebase:', error);
+            firebaseError = error;
+            
+            // Сохраняем для оффлайн синхронизации
+            saveToOfflineQueue('siteData', 'sobkoStore', siteData, error);
+        }
+    } else {
+        console.log('📴 Firebase недоступен для сохранения');
+    }
+    
+    // 3. Сохраняем метку времени для других вкладок
+    localStorage.setItem('last_admin_update', Date.now().toString());
+    localStorage.setItem('admin_update_data', JSON.stringify(siteData));
+    
+    // 4. Принудительно обновляем localStorage для других вкладок
+    window.dispatchEvent(new StorageEvent('storage', {
+        key: SITE_DATA_KEY,
+        newValue: JSON.stringify(siteData),
+        oldValue: localStorage.getItem(SITE_DATA_KEY),
+        url: window.location.href
+    }));
+    
+    return {
+        success: savedToFirebase || !checkFirebaseConnection(),
+        savedToFirebase: savedToFirebase,
+        error: firebaseError
+    };
+}
+
+// Уведомление клиентов об обновлении
+async function notifyClientsAboutUpdate(type = 'site_data') {
+    if (!checkFirebaseConnection()) {
+        console.log('❌ Firebase недоступен для уведомления');
+        return false;
+    }
+    
+    try {
+        console.log('📢 Уведомление клиентов об обновлении...');
+        
+        await db.collection('updates').doc('last_update').set({
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            type: type,
+            version: siteData.syncVersion || 1,
+            force: true
+        });
+        
+        console.log('✅ Клиенты уведомлены об обновлении');
+        return true;
+    } catch (error) {
+        console.log('Не удалось уведомить клиентов:', error);
+        return false;
+    }
+}
+
+// Функция для принудительного уведомления
+async function forceNotifyClients() {
+    if (!checkFirebaseConnection()) {
+        console.log('❌ Firebase недоступен для уведомления');
+        return false;
+    }
+    
+    try {
+        console.log('📢 ПРИНУДИТЕЛЬНОЕ уведомление клиентов...');
+        
+        // Создаем документ в отдельной коллекции для уведомлений
+        await db.collection('force_updates').doc('admin_update').set({
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            adminUpdate: true,
+            version: Date.now(),
+            dataVersion: siteData.syncVersion || 1,
+            force: true
+        });
+        
+        console.log('✅ Принудительное уведомление отправлено');
+        
+        // Также обновляем основной документ
+        await notifyClientsAboutUpdate('force_update');
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Ошибка принудительного уведомления:', error);
+        return false;
+    }
+}
+
+// Сохранение в очередь оффлайн
+function saveToOfflineQueue(error) {
+    const offlineData = {
+        collection: 'siteData',
+        documentId: 'sobkoStore',
+        data: siteData,
+        timestamp: new Date().toISOString(),
+        error: error?.message || 'Unknown error',
+        retryCount: 0
+    };
+    
+    const offlineQueue = JSON.parse(localStorage.getItem('firebase_offline_queue') || '[]');
+    offlineQueue.push(offlineData);
+    localStorage.setItem('firebase_offline_queue', JSON.stringify(offlineQueue));
+    
+    console.log('📝 Данные сохранены в очередь оффлайн синхронизации');
+}
+
+// ==================== СОХРАНЕНИЕ КОНТЕНТА ====================
+
+// Сохранение контента
+async function saveContent() {
+    console.log('💾 Сохранение контента...');
+    
+    const content = siteData.content || {};
+    
+    // Получаем значения
+    const title = document.getElementById('store-name').value.trim();
+    const description = document.getElementById('store-description').value.trim();
+    const highlight = document.getElementById('store-highlight').value.trim();
+    const aboutText = document.getElementById('about-text').value.trim();
+    const warningText = document.getElementById('warning-text').value.trim();
+    const freeDelivery = parseInt(document.getElementById('free-delivery').value) || 2500;
+    const deliveryCost = parseInt(document.getElementById('delivery-cost').value) || 500;
+    const minOrder = parseInt(document.getElementById('min-order').value) || 1000;
+    
+    // Валидация основных полей
+    if (!title) {
+        showNotification('❌ Введите название магазина', 'error');
+        return;
+    }
+    
+    if (!description) {
+        showNotification('❌ Введите описание магазина', 'error');
+        return;
+    }
+    
+    // Сохраняем в siteData
+    content.title = title;
+    content.description = description;
+    content.highlight = highlight || '';
+    content.aboutText = aboutText || '';
+    content.warningText = warningText || '';
+    content.freeDelivery = freeDelivery;
+    content.deliveryCost = deliveryCost;
+    content.minOrder = minOrder;
+    
+    siteData.content = content;
+    
+    console.log('📝 Контент для сохранения:', {
+        title: content.title,
+        freeDelivery: content.freeDelivery,
+        syncVersion: siteData.syncVersion
+    });
+    
+    // Сохраняем с улучшенной синхронизацией
+    const result = await saveSiteData();
+    
+    if (result.savedToFirebase) {
+        showNotification('✅✅✅ Контент сохранен и синхронизирован с облаком!', 'success', 4000);
+        
+        // ПРИНУДИТЕЛЬНО уведомляем клиентов об обновлении
+        setTimeout(async () => {
+            await forceNotifyClients();
+            console.log('📢 Клиенты уведомлены об обновлении контента');
+        }, 1000);
+        
+    } else if (result.success) {
+        showNotification('✅ Контент сохранен локально. Синхронизация при восстановлении соединения.', 'warning', 4000);
+    } else {
+        showNotification('❌ Ошибка сохранения: ' + (result.error?.message || 'Неизвестная ошибка'), 'error', 5000);
+    }
+    
+    updateLastUpdate();
+    updateAdminInfo();
+}
+
+// Сохранение настроек доставки
+async function saveSettings() {
+    console.log('💾 Сохранение настроек доставки...');
+    
+    const content = siteData.content || {};
+    
+    // Получаем значения
+    const freeDelivery = parseInt(document.getElementById('free-delivery').value) || 2500;
+    const deliveryCost = parseInt(document.getElementById('delivery-cost').value) || 500;
+    const minOrder = parseInt(document.getElementById('min-order').value) || 1000;
+    
+    // Валидация
+    if (freeDelivery < 0 || deliveryCost < 0 || minOrder < 0) {
+        showNotification('❌ Значения не могут быть отрицательными', 'error');
+        return;
+    }
+    
+    if (minOrder > freeDelivery) {
+        showNotification('⚠️ Минимальный заказ выше порога бесплатной доставки', 'warning');
+    }
+    
+    // Сохраняем в siteData
+    content.freeDelivery = freeDelivery;
+    content.deliveryCost = deliveryCost;
+    content.minOrder = minOrder;
+    
+    siteData.content = content;
+    
+    console.log('📝 Настройки доставки:', {
+        freeDelivery: content.freeDelivery,
+        deliveryCost: content.deliveryCost,
+        minOrder: content.minOrder
+    });
+    
+    // Сохраняем с улучшенной синхронизацией
+    const result = await saveSiteData();
+    
+    if (result.savedToFirebase) {
+        showNotification('✅✅✅ Настройки сохранены и синхронизированы с облаком!', 'success', 3000);
+        
+        // ПРИНУДИТЕЛЬНО уведомляем клиентов
+        setTimeout(async () => {
+            await forceNotifyClients();
+            console.log('📢 Клиенты уведомлены об обновлении настроек');
+        }, 1000);
+        
+    } else if (result.success) {
+        showNotification('✅ Настройки сохранены локально. Синхронизация при восстановлении соединения.', 'warning', 3000);
+    } else {
+        showNotification('❌ Ошибка сохранения настроек', 'error', 3000);
+    }
+    
+    updateLastUpdate();
+}
+
+// Сохранение контактов
+async function saveContacts() {
+    console.log('💾 Сохранение контактов...');
+    
+    // Проверяем, есть ли объект settings
+    if (!siteData.settings) {
+        siteData.settings = {};
+    }
+    
+    // Получаем значения
+    const storePhone = document.getElementById('store-phone').value.trim();
+    const newYearPhone = document.getElementById('newyear-phone').value.trim();
+    const storeAddress = document.getElementById('store-address').value.trim();
+    const storeHours = document.getElementById('store-hours').value.trim();
+    const newYearHours = document.getElementById('newyear-hours').value.trim();
+    
+    // Валидация основных полей
+    if (!storePhone) {
+        showNotification('❌ Введите основной телефон магазина', 'error');
+        return;
+    }
+    
+    if (!storeAddress) {
+        showNotification('❌ Введите адрес магазина', 'error');
+        return;
+    }
+    
+    // Сохраняем в siteData
+    siteData.settings = {
+        storePhone: storePhone,
+        newYearPhone: newYearPhone || '',
+        storeAddress: storeAddress,
+        storeHours: storeHours || 'Пн-Пт: 10:00 - 20:00\nСб-Вс: 10:00 - 18:00',
+        newYearHours: newYearHours || '24-31 декабря: 9:00 - 22:00'
+    };
+    
+    console.log('📝 Контакты для сохранения:', siteData.settings);
+    
+    // Сохраняем с улучшенной синхронизацией
+    const result = await saveSiteData();
+    
+    if (result.savedToFirebase) {
+        showNotification('✅✅✅ Контакты сохранены и синхронизированы с облаком!', 'success', 4000);
+        
+        // ПРИНУДИТЕЛЬНО уведомляем клиентов об обновлении
+        setTimeout(async () => {
+            await forceNotifyClients();
+            console.log('📢 Клиенты уведомлены об обновлении контактов');
+        }, 1000);
+        
+    } else if (result.success) {
+        showNotification('✅ Контакты сохранены локально. Синхронизация при восстановлении соединения.', 'warning', 4000);
+    } else {
+        showNotification('❌ Ошибка сохранения: ' + (result.error?.message || 'Неизвестная ошибка'), 'error', 5000);
+    }
+    
+    updateLastUpdate();
+    updateAdminInfo();
+}
+
+// Сохранение логотипа
+async function saveLogo() {
+    console.log('💾 Сохранение логотипа...');
+    
+    const urlInput = document.getElementById('logo-url').value.trim();
+    const logoImg = document.getElementById('current-logo');
+    
+    if (!urlInput) {
+        // Если URL пустой, удаляем логотип
+        siteData.content = siteData.content || {};
+        delete siteData.content.logo;
+        
+        // Скрываем изображение
+        logoImg.style.display = 'none';
+        
+        const result = await saveSiteData();
+        
+        if (result.savedToFirebase) {
+            showNotification('✅ Логотип удален и синхронизирован!', 'success', 3000);
+            
+            // ПРИНУДИТЕЛЬНО уведомляем клиентов
+            setTimeout(async () => {
+                await forceNotifyClients();
+            }, 1000);
+            
+        } else if (result.success) {
+            showNotification('✅ Логотип удален локально', 'warning', 3000);
         }
         
-        // Сохранение контента
-        async function saveContent() {
-            const content = siteData.content || {};
-            
-            content.title = document.getElementById('store-name').value;
-            content.description = document.getElementById('store-description').value;
-            content.highlight = document.getElementById('store-highlight').value;
-            content.aboutText = document.getElementById('about-text').value;
-            content.warningText = document.getElementById('warning-text').value;
-            content.freeDelivery = parseInt(document.getElementById('free-delivery').value) || 2500;
-            content.deliveryCost = parseInt(document.getElementById('delivery-cost').value) || 500;
-            content.minOrder = parseInt(document.getElementById('min-order').value) || 1000;
-            
-            siteData.content = content;
-            
-            const saved = await saveSiteData();
-            
-            if (saved) {
-                showNotification('✅ Контент успешно сохранен и синхронизирован!', 'success');
-            } else {
-                showNotification('✅ Контент сохранен локально. Синхронизация при восстановлении соединения.', 'warning');
-            }
-            
-            updateLastUpdate();
-            updateAdminInfo();
+        updateLastUpdate();
+        return;
+    }
+    
+    // Проверяем валидность URL
+    if (!isValidUrl(urlInput)) {
+        showNotification('❌ Пожалуйста, введите корректный URL изображения', 'error', 3000);
+        return;
+    }
+    
+    // Проверяем, является ли URL изображением
+    if (!urlInput.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) && !urlInput.startsWith('data:')) {
+        if (!confirm('⚠️ URL не похож на изображение. Продолжить сохранение?')) {
+            return;
         }
+    }
+    
+    // Сохраняем в siteData
+    siteData.content = siteData.content || {};
+    siteData.content.logo = urlInput;
+    
+    console.log('📝 Логотип для сохранения:', urlInput);
+    
+    // Обновляем превью (но проверяем загрузку)
+    const tempImg = new Image();
+    tempImg.onload = function() {
+        // Если изображение загрузилось успешно
+        logoImg.src = urlInput;
+        logoImg.style.display = 'block';
+        console.log('✅ Логотип успешно загружен');
+    };
+    tempImg.onerror = function() {
+        // Если не удалось загрузить
+        logoImg.style.display = 'none';
+        showNotification('⚠️ Не удалось загрузить изображение по указанному URL. Проверьте ссылку.', 'warning', 4000);
+        console.warn('Не удалось загрузить логотип:', urlInput);
+    };
+    tempImg.src = urlInput;
+    
+    // Сохраняем с улучшенной синхронизацией
+    const result = await saveSiteData();
+    
+    if (result.savedToFirebase) {
+        showNotification('✅✅✅ Логотип сохранен и синхронизирован с облаком!', 'success', 4000);
         
-        // Сохранение настроек
-        async function saveSettings() {
-            const content = siteData.content || {};
-            
-            content.freeDelivery = parseInt(document.getElementById('free-delivery').value) || 2500;
-            content.deliveryCost = parseInt(document.getElementById('delivery-cost').value) || 500;
-            content.minOrder = parseInt(document.getElementById('min-order').value) || 1000;
-            
-            siteData.content = content;
-            
-            const saved = await saveSiteData();
-            
-            if (saved) {
-                showNotification('✅ Настройки доставки сохранены!', 'success');
-            } else {
-                showNotification('✅ Настройки сохранены локально', 'warning');
-            }
-            
-            updateLastUpdate();
-        }
+        // ПРИНУДИТЕЛЬНО уведомляем клиентов
+        setTimeout(async () => {
+            await forceNotifyClients();
+            console.log('📢 Клиенты уведомлены об обновлении логотипа');
+        }, 1000);
         
-        // Сохранение контактов
-        async function saveContacts() {
-            const settings = siteData.settings || {};
-            
-            settings.storePhone = document.getElementById('store-phone').value;
-            settings.newYearPhone = document.getElementById('newyear-phone').value;
-            settings.storeAddress = document.getElementById('store-address').value;
-            settings.storeHours = document.getElementById('store-hours').value;
-            settings.newYearHours = document.getElementById('newyear-hours').value;
-            
-            siteData.settings = settings;
-            
-            const saved = await saveSiteData();
-            
-            if (saved) {
-                showNotification('✅ Контакты сохранены и синхронизированы!', 'success');
-            } else {
-                showNotification('✅ Контакты сохранены локально', 'warning');
-            }
-            
-            updateLastUpdate();
-        }
-        
-        // Сохранение логотипа
-        async function saveLogo() {
-            const urlInput = document.getElementById('logo-url').value.trim();
-            
-            if (urlInput) {
-                if (!isValidUrl(urlInput)) {
-                    showNotification('❌ Пожалуйста, введите корректный URL', 'error');
-                    return;
-                }
-                
-                siteData.content = siteData.content || {};
-                siteData.content.logo = urlInput;
-                
-                const saved = await saveSiteData();
-                
-                // Обновляем изображение
-                document.getElementById('current-logo').src = urlInput;
-                document.getElementById('current-logo').style.display = 'block';
-                
-                if (saved) {
-                    showNotification('✅ Логотип сохранен и синхронизирован!', 'success');
-                } else {
-                    showNotification('✅ Логотип сохранен локально', 'warning');
-                }
-                
-                updateLastUpdate();
-            } else {
-                showNotification('❌ Введите URL логотипа', 'error');
-            }
-        }
-        
-        // Проверка валидности URL
-        function isValidUrl(string) {
-            try {
-                new URL(string);
-                return true;
-            } catch (_) {
-                return false;
-            }
-        }
-        
-        // ==================== УПРАВЛЕНИЕ ТОВАРАМИ ====================
+    } else if (result.success) {
+        showNotification('✅ Логотип сохранен локально. Синхронизация при восстановлении соединения.', 'warning', 4000);
+    } else {
+        showNotification('❌ Ошибка сохранения логотипа', 'error', 3000);
+    }
+    
+    updateLastUpdate();
+    updateAdminInfo();
+}
+
+// Проверка валидности URL
+function isValidUrl(string) {
+    try {
+        const url = new URL(string);
+        return url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'data:';
+    } catch (_) {
+        return false;
+    }
+}
+
+// Функция для тестирования логотипа
+function testLogoUrl() {
+    const urlInput = document.getElementById('logo-url').value.trim();
+    const logoImg = document.getElementById('current-logo');
+    
+    if (!urlInput) {
+        showNotification('❌ Введите URL для тестирования', 'error', 2000);
+        return;
+    }
+    
+    if (!isValidUrl(urlInput)) {
+        showNotification('❌ Неверный формат URL', 'error', 2000);
+        return;
+    }
+    
+    showNotification('🔄 Тестирование загрузки логотипа...', 'info', 2000);
+    
+    const tempImg = new Image();
+    tempImg.onload = function() {
+        showNotification('✅ Логотип успешно загружается! Размер: ' + this.width + 'x' + this.height, 'success', 3000);
+        logoImg.src = urlInput;
+        logoImg.style.display = 'block';
+    };
+    tempImg.onerror = function() {
+        showNotification('❌ Не удалось загрузить логотип. Проверьте URL.', 'error', 3000);
+        logoImg.style.display = 'none';
+    };
+    tempImg.src = urlInput;
+}
+
+// ==================== УПРАВЛЕНИЕ ТОВАРАМИ ====================
         
         async function addProduct() {
             const name = document.getElementById('product-name').value.trim();
@@ -2621,6 +3052,217 @@
                 showNotification('✅ Все изменения сохранены локально. Синхронизация при восстановлении соединения.', 'warning', 5000);
             }
         }
+		
+		// Функция для тестирования загрузки логотипа
+function testLogoUrl() {
+    const urlInput = document.getElementById('logo-url').value.trim();
+    const logoImg = document.getElementById('current-logo');
+    const placeholder = document.getElementById('logo-placeholder');
+    const statusText = document.getElementById('logo-status-text');
+    const dimensions = document.getElementById('logo-dimensions');
+    const typeText = document.getElementById('logo-type');
+    const sizeText = document.getElementById('logo-size');
+    
+    if (!urlInput) {
+        showNotification('❌ Введите URL для тестирования', 'error', 2000);
+        return;
+    }
+    
+    // Проверяем формат URL
+    if (!isValidUrl(urlInput)) {
+        showNotification('❌ Неверный формат URL. Используйте http://, https:// или data:', 'error', 3000);
+        statusText.textContent = '❌ Ошибка формата';
+        return;
+    }
+    
+    showNotification('🔄 Проверяю загрузку логотипа...', 'info', 2000);
+    
+    // Показываем статус загрузки
+    statusText.textContent = '🔄 Проверка...';
+    statusText.style.color = '#ff9800';
+    dimensions.textContent = 'Размер: загрузка...';
+    
+    const tempImg = new Image();
+    
+    tempImg.onload = function() {
+        // Успешная загрузка
+        const width = this.naturalWidth || this.width;
+        const height = this.naturalHeight || this.height;
+        
+        // Определяем тип изображения
+        let type = 'Неизвестно';
+        if (urlInput.includes('.png') || urlInput.includes('image/png')) type = 'PNG';
+        else if (urlInput.includes('.jpg') || urlInput.includes('.jpeg') || urlInput.includes('image/jpeg')) type = 'JPG';
+        else if (urlInput.includes('.gif') || urlInput.includes('image/gif')) type = 'GIF';
+        else if (urlInput.includes('.svg') || urlInput.includes('image/svg')) type = 'SVG';
+        else if (urlInput.includes('.webp') || urlInput.includes('image/webp')) type = 'WebP';
+        else if (urlInput.includes('data:image/')) type = 'Data URL';
+        
+        // Показываем уведомление
+        showNotification(`✅ Логотип загружен! ${width}×${px} (${type})`, 'success', 3000);
+        
+        // Показываем изображение
+        logoImg.src = urlInput;
+        logoImg.style.display = 'block';
+        
+        // Скрываем плейсхолдер
+        placeholder.style.display = 'none';
+        
+        // Обновляем информацию
+        statusText.textContent = '✅ Загружен';
+        statusText.style.color = '#28a745';
+        dimensions.textContent = `Размер: ${width}×${height}px`;
+        typeText.textContent = `Тип: ${type}`;
+        
+        // Пытаемся определить вес (для Data URL)
+        if (urlInput.startsWith('data:')) {
+            const size = Math.round(urlInput.length * 3 / 4); // приблизительный размер в байтах
+            if (size > 1024 * 1024) {
+                sizeText.textContent = `Вес: ${(size / (1024 * 1024)).toFixed(2)} MB`;
+            } else if (size > 1024) {
+                sizeText.textContent = `Вес: ${(size / 1024).toFixed(2)} KB`;
+            } else {
+                sizeText.textContent = `Вес: ${size} B`;
+            }
+        } else {
+            sizeText.textContent = 'Вес: ~';
+        }
+        
+        // Проверяем рекомендуемые размеры
+        if (width > 400 || height > 200) {
+            showNotification('⚠️ Логотип слишком большой. Рекомендуется до 400×200 пикселей.', 'warning', 4000);
+        }
+        
+        if (width < 50 || height < 50) {
+            showNotification('⚠️ Логотип слишком маленький. Может плохо отображаться.', 'warning', 4000);
+        }
+    };
+    
+    tempImg.onerror = function() {
+        // Ошибка загрузки
+        showNotification('❌ Не удалось загрузить изображение. Проверьте URL и доступность.', 'error', 3000);
+        
+        // Скрываем изображение
+        logoImg.style.display = 'none';
+        
+        // Показываем плейсхолдер
+        placeholder.style.display = 'block';
+        
+        // Обновляем информацию
+        statusText.textContent = '❌ Ошибка';
+        statusText.style.color = '#dc3545';
+        dimensions.textContent = 'Размер: не загружен';
+        typeText.textContent = 'Тип: ошибка';
+        sizeText.textContent = 'Вес: -';
+    };
+    
+    // Устанавливаем таймаут на случай зависания
+    setTimeout(() => {
+        if (statusText.textContent === '🔄 Проверка...') {
+            showNotification('⚠️ Проверка занимает слишком долго. Возможно, проблемы с доступом к изображению.', 'warning', 4000);
+            statusText.textContent = '⚠️ Таймаут';
+            statusText.style.color = '#ff9800';
+        }
+    }, 10000);
+    
+    // Начинаем загрузку
+    tempImg.src = urlInput;
+}
+
+// Улучшенная проверка URL
+function isValidUrl(string) {
+    try {
+        // Проверяем обычные URL
+        if (string.startsWith('http://') || string.startsWith('https://')) {
+            new URL(string);
+            return true;
+        }
+        
+        // Проверяем Data URL (базовый формат)
+        if (string.startsWith('data:image/')) {
+            // Более простая проверка для Data URL
+            return string.length > 100; // Data URL должен быть достаточно длинным
+        }
+        
+        return false;
+    } catch (_) {
+        return false;
+    }
+}
+
+// Также обновите функцию saveLogo для правильной работы с новыми элементами
+async function saveLogo() {
+    console.log('💾 Сохранение логотипа...');
+    
+    const urlInput = document.getElementById('logo-url').value.trim();
+    const logoImg = document.getElementById('current-logo');
+    const statusText = document.getElementById('logo-status-text');
+    
+    if (!urlInput) {
+        // Если URL пустой, удаляем логотип
+        siteData.content = siteData.content || {};
+        delete siteData.content.logo;
+        
+        // Скрываем изображение
+        logoImg.style.display = 'none';
+        document.getElementById('logo-placeholder').style.display = 'block';
+        
+        const result = await saveSiteData();
+        
+        if (result.savedToFirebase) {
+            showNotification('✅ Логотип удален и синхронизирован!', 'success', 3000);
+            statusText.textContent = '✅ Удален';
+            statusText.style.color = '#28a745';
+        } else if (result.success) {
+            showNotification('✅ Логотип удален локально', 'warning', 3000);
+            statusText.textContent = '⚠️ Удален локально';
+            statusText.style.color = '#ff9800';
+        }
+        
+        updateLastUpdate();
+        return;
+    }
+    
+    // Проверяем валидность URL
+    if (!isValidUrl(urlInput)) {
+        showNotification('❌ Пожалуйста, введите корректный URL изображения', 'error', 3000);
+        return;
+    }
+    
+    // Если статус не "Загружен", предупреждаем
+    if (statusText.textContent !== '✅ Загружен') {
+        if (!confirm('⚠️ Логотип не был проверен. Сохранить без проверки?')) {
+            return;
+        }
+    }
+    
+    // Сохраняем в siteData
+    siteData.content = siteData.content || {};
+    siteData.content.logo = urlInput;
+    
+    console.log('📝 Сохранение логотипа:', urlInput);
+    
+    // Сохраняем с улучшенной синхронизацией
+    const result = await saveSiteData();
+    
+    if (result.savedToFirebase) {
+        showNotification('✅✅✅ Логотип сохранен и синхронизирован с облаком!', 'success', 4000);
+        
+        // ПРИНУДИТЕЛЬНО уведомляем клиентов
+        setTimeout(async () => {
+            await forceNotifyClients();
+            console.log('📢 Клиенты уведомлены об обновлении логотипа');
+        }, 1000);
+        
+    } else if (result.success) {
+        showNotification('✅ Логотип сохранен локально. Синхронизация при восстановлении соединения.', 'warning', 4000);
+    } else {
+        showNotification('❌ Ошибка сохранения логотипа', 'error', 3000);
+    }
+    
+    updateLastUpdate();
+    updateAdminInfo();
+}
         
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
         
