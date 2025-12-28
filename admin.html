@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админ-панель | Сыроварня SOBKO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    
+    <!-- Конфигурация Firebase -->
+    <script src="firebase-config.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -857,7 +867,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Стоимость доставки (₽)</label>
+                        <label>Стоимость доставка (₽)</label>
                         <input type="number" id="delivery-cost" class="form-control" value="500" min="0">
                     </div>
                     
@@ -1231,237 +1241,218 @@
     
     <script>
         // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
-        
-        // Ключ для хранения данных сайта
         const SITE_DATA_KEY = 'sobko_site_data';
         let siteData = {};
-        
-        // ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
-        
-        // Функция для загрузки данных сайта
-        function loadSiteData() {
-            const saved = localStorage.getItem(SITE_DATA_KEY);
-            if (saved) {
-                siteData = JSON.parse(saved);
-            } else {
-                // Дефолтные данные
-                siteData = {
-                    content: {},
-                    settings: {},
-                    products: [],
-                    orders: [],
-                    colorScheme: {},
-                    lastUpdated: null
-                };
-            }
-            return siteData;
-        }
-        
-        // Функция для сохранения данных сайта
-        function saveSiteData() {
-            siteData.lastUpdated = Date.now();
-            localStorage.setItem(SITE_DATA_KEY, JSON.stringify(siteData));
-            
-            // Также сохраняем в локальное хранилище для обратной совместимости
-            if (siteData.content) {
-                localStorage.setItem('siteContent', JSON.stringify(siteData.content));
-            }
-            if (siteData.settings) {
-                localStorage.setItem('storeSettings', JSON.stringify(siteData.settings));
-            }
-            if (siteData.products) {
-                localStorage.setItem('products', JSON.stringify(siteData.products));
-            }
-            if (siteData.orders) {
-                localStorage.setItem('orders', JSON.stringify(siteData.orders));
-            }
-            if (siteData.colorScheme) {
-                localStorage.setItem('colorScheme', JSON.stringify(siteData.colorScheme));
-            }
-            
-            // Отмечаем, что данные обновились
-            localStorage.setItem('site_data_updated', Date.now().toString());
-            
-            // Отправляем уведомление другим вкладкам
-            broadcastUpdate('site_data');
-        }
-        
-        // Функция для отправки уведомлений
-        function broadcastUpdate(type) {
-            // Через BroadcastChannel если доступно
-            if ('BroadcastChannel' in window) {
-                try {
-                    const channel = new BroadcastChannel('sobko_updates');
-                    channel.postMessage({
-                        type: type,
-                        timestamp: Date.now()
-                    });
-                } catch (e) {
-                    console.log('BroadcastChannel не поддерживается');
-                }
-            }
-            
-            // Через события storage
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: 'site_data_updated',
-                newValue: Date.now().toString()
-            }));
-        }
-        
-        // Инициализация синхронизации
-        function initSync() {
-            loadSiteData();
-            
-            // Слушаем обновления от других вкладок
-            window.addEventListener('storage', function(event) {
-                if (event.key === 'site_data_updated') {
-                    console.log('🔄 Обнаружено обновление данных сайта');
-                    // Перезагружаем данные
-                    loadSiteData();
-                    // Обновляем UI
-                    if (document.getElementById('content-section').classList.contains('active')) {
-                        loadAdminData();
-                    }
-                    if (document.getElementById('products-section').classList.contains('active')) {
-                        loadProductsForAdmin();
-                    }
-                    if (document.getElementById('orders-section').classList.contains('active')) {
-                        loadOrders();
-                    }
-                    updateSidebarInfo();
-                    updateStatistics();
-                }
-            });
-            
-            // Инициализируем Broadcast Channel
-            if ('BroadcastChannel' in window) {
-                const channel = new BroadcastChannel('sobko_updates');
-                
-                channel.onmessage = function(event) {
-                    if (event.data.type === 'site_data') {
-                        console.log('📡 Получено обновление данных сайта по Broadcast Channel');
-                        loadSiteData();
-                        // Обновляем активную секцию
-                        const activeSection = document.querySelector('.admin-section.active');
-                        if (activeSection) {
-                            if (activeSection.id === 'content-section') loadAdminData();
-                            if (activeSection.id === 'products-section') loadProductsForAdmin();
-                            if (activeSection.id === 'orders-section') loadOrders();
-                        }
-                        updateSidebarInfo();
-                        updateStatistics();
-                    }
-                };
-            }
-        }
+        let currentFilter = 'all';
         
         // ==================== ИНИЦИАЛИЗАЦИЯ ====================
-        
-        // Усиленная проверка загрузки админ-панели
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('✅ Админ-панель загружена');
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔧 Загрузка админ-панели...');
             
-            // Проверяем, правильно ли мы загрузились
-            if (!window.location.href.includes('admin.html')) {
-                console.warn('⚠️ Предупреждение: Мы не на странице admin.html');
-                console.log('Текущий URL:', window.location.href);
+            // Проверка авторизации
+            if (!checkAdminAuth()) {
+                return;
             }
             
-            // Усиленная проверка авторизации
+            // Инициализация Firebase
+            initializeFirebase();
+            
+            // Загрузка данных
+            await loadAdminData();
+            
+            // Настройка слушателей
+            setupAdminListeners();
+            
+            console.log('✅ Админ-панель загружена');
+        });
+        
+        // Проверка авторизации администратора
+        function checkAdminAuth() {
             const adminPassword = 'admin123';
             
-            // Если пользователь не авторизован, показываем запрос пароля
             if (!localStorage.getItem('adminLoggedIn')) {
                 const password = prompt('🔐 Введите пароль для доступа к админ-панели:');
                 if (password === adminPassword) {
                     localStorage.setItem('adminLoggedIn', 'true');
                     showNotification('✅ Добро пожаловать в админ-панель!', 'success');
-                    
-                    // Перезагружаем страницу после успешной авторизации
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
+                    return true;
                 } else {
                     alert('❌ Неверный пароль! Доступ запрещен.');
-                    // Перенаправляем на главную страницу
                     window.location.href = 'index.html';
+                    return false;
                 }
-            } else {
-                console.log('✅ Пользователь уже авторизован');
+            }
+            return true;
+        }
+        
+        // Настройка слушателей
+        function setupAdminListeners() {
+            // Слушатель для обновлений из Firebase
+            if (checkFirebaseConnection()) {
+                setupFirebaseListener('siteData', 'sobkoStore', (data) => {
+                    console.log('🔄 Получены обновления из Firebase');
+                    siteData = data;
+                    localStorage.setItem(SITE_DATA_KEY, JSON.stringify(data));
+                    
+                    // Обновляем активную секцию
+                    const activeSection = document.querySelector('.admin-section.active');
+                    if (activeSection) {
+                        if (activeSection.id === 'content-section') populateAdminForms();
+                        if (activeSection.id === 'products-section') loadProductsForAdmin();
+                        if (activeSection.id === 'orders-section') loadOrders();
+                        if (activeSection.id === 'statistics-section') updateStatistics();
+                    }
+                    
+                    updateAdminInfo();
+                    showNotification('🔄 Данные обновлены из облака', 'info', 2000);
+                });
             }
             
-            // Дальнейшая инициализация
-            loadSiteData();
-            initSync();
-            loadAdminData();
+            // Слушатель для офлайн/онлайн статуса
+            window.addEventListener('online', () => {
+                showNotification('🌐 Соединение восстановлено', 'info', 2000);
+                syncOfflineQueue();
+            });
+            
+            window.addEventListener('offline', () => {
+                showNotification('📴 Потеряно соединение с интернетом', 'warning', 2000);
+            });
+        }
+        
+        // ==================== ЗАГРУЗКА ДАННЫХ ====================
+        
+        async function loadAdminData() {
+            console.log('📥 Загрузка данных для админки...');
+            
+            // Пробуем загрузить из Firebase
+            if (checkFirebaseConnection()) {
+                try {
+                    const firebaseData = await loadFromFirebase('siteData', 'sobkoStore');
+                    if (firebaseData) {
+                        siteData = firebaseData;
+                        console.log('✅ Данные загружены из Firebase');
+                    } else {
+                        // Создаем документ с дефолтными данными
+                        siteData = getDefaultSiteData();
+                        await saveToFirebase('siteData', 'sobkoStore', siteData);
+                        console.log('📝 Создан новый документ в Firebase');
+                    }
+                } catch (error) {
+                    console.error('❌ Ошибка загрузки из Firebase:', error);
+                    // Используем локальные данные
+                    siteData = loadFromLocalStorage();
+                }
+            } else {
+                // Firebase недоступен, используем локальные данные
+                siteData = loadFromLocalStorage();
+            }
+            
+            // Сохраняем локально для оффлайн работы
+            localStorage.setItem(SITE_DATA_KEY, JSON.stringify(siteData));
+            
+            // Заполняем формы
+            populateAdminForms();
+            
+            // Обновляем информацию
+            updateAdminInfo();
+            
+            // Загружаем товары и заказы
             loadProductsForAdmin();
             loadOrders();
             updateStatistics();
-            updateSidebarInfo();
-            loadCurrentColors();
-        });
-        
-        // Функция для отладки
-        function checkAdminPage() {
-            console.log('=== Информация о странице ===');
-            console.log('URL:', window.location.href);
-            console.log('Название страницы:', document.title);
-            console.log('Есть ли элемент .admin-header:', document.querySelector('.admin-header') ? 'Да' : 'Нет');
-            console.log('Есть ли элемент .admin-container:', document.querySelector('.admin-container') ? 'Да' : 'Нет');
-            console.log('localStorage adminLoggedIn:', localStorage.getItem('adminLoggedIn'));
-            console.log('===========================');
         }
         
-        // Вызываем проверку
-        checkAdminPage();
-        
-        // Переключение между секциями
-        function showSection(sectionId) {
-            // Скрываем все секции
-            document.querySelectorAll('.admin-section').forEach(section => {
-                section.classList.remove('active');
-            });
-            
-            // Показываем нужную секцию
-            document.getElementById(sectionId + '-section').classList.add('active');
-            
-            // Обновляем активную ссылку в навигации
-            document.querySelectorAll('.admin-nav a').forEach(link => {
-                link.classList.remove('active');
-            });
-            
-            // Находим ссылку по ID секции
-            const activeLink = document.querySelector(`.admin-nav a[href="#${sectionId}"]`);
-            if (activeLink) {
-                activeLink.classList.add('active');
-            }
-            
-            // При переключении на секцию заказов обновляем список
-            if (sectionId === 'orders') {
-                loadOrders();
-            }
-            
-            // При переключении на статистику обновляем данные
-            if (sectionId === 'statistics') {
-                updateStatistics();
-            }
-            
-            // При переключении на цвета загружаем текущие цвета
-            if (sectionId === 'colors') {
-                loadCurrentColors();
-            }
+        // Загрузка из LocalStorage
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem(SITE_DATA_KEY);
+            return saved ? JSON.parse(saved) : getDefaultSiteData();
         }
         
-        // ==================== УПРАВЛЕНИЕ КОНТЕНТОМ ====================
+        // Дефолтные данные сайта
+        function getDefaultSiteData() {
+            return {
+                content: {
+                    title: "✨ Сыроварня SOBKO ✨",
+                    description: "🎄 Создайте волшебный новогодний стол с нашими авторскими сырами!",
+                    highlight: "🎁 Бесплатная доставка от 2500₽ + праздничный сюрприз!",
+                    aboutText: "Дорогие друзья! 🎅 Мы рады приветствовать вас в преддверии самого волшебного праздника - Нового Года! ❄️✨\n\nЗа окном уже вовсю хозяйничает зима – снежок идет, и чувствуется, что она пришла по-настоящему! Скоро будем наряжать елочки 🎄 собирать самые вкусные новогодние угощения и создавать праздничное настроение.\n\nВарим ремесленный сыр только из фермерского молока высокогорных пастбищ. Без использования химии и консервантов.",
+                    warningText: "⚠️ Осторожно! Вкус натурального сыра незабываем, вызывает привыкание и новогоднее настроение!",
+                    freeDelivery: 2500,
+                    deliveryCost: 500,
+                    minOrder: 1000,
+                    logo: ""
+                },
+                settings: {
+                    storePhone: "8-902-635-33-03",
+                    newYearPhone: "8-999-123-45-67",
+                    storeAddress: "Краснокамск, ул. Геофизиков, 6\nТЦ Добрыня, павильонный ряд",
+                    storeHours: "Пн-Пт: 10:00 - 20:00\nСб-Вс: 10:00 - 18:00",
+                    newYearHours: "24-31 декабря: 9:00 - 22:00"
+                },
+                products: [
+                    {
+                        id: 1,
+                        name: "Пармезан Новогодний",
+                        description: "Выдержанный 2 года, идеален для праздничной тарелки",
+                        price: 590,
+                        weight: "150 гр",
+                        image: "",
+                        category: "cheese",
+                        isActive: true,
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 2,
+                        name: "Буррата Снежная",
+                        description: "Нежнейший сыр с кремовой начинкой",
+                        price: 320,
+                        weight: "200 гр",
+                        image: "",
+                        category: "cheese",
+                        isActive: true,
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 3,
+                        name: "Гауда Золотая",
+                        description: "С легкой карамельной ноткой и ореховым послевкусием",
+                        price: 450,
+                        weight: "150 гр",
+                        image: "",
+                        category: "cheese",
+                        isActive: true,
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 4,
+                        name: "Камамбер Праздничный",
+                        description: "С белой плесенью и нежной текстурой",
+                        price: 380,
+                        weight: "180 гр",
+                        image: "",
+                        category: "cheese",
+                        isActive: true,
+                        createdAt: new Date().toISOString()
+                    }
+                ],
+                orders: [],
+                colorScheme: {
+                    primary: "#c62828",
+                    secondary: "#2e7d32",
+                    accent: "#ffd700",
+                    background: "#0c2461"
+                },
+                lastUpdated: new Date().toISOString()
+            };
+        }
         
-        // Загрузка данных для админки
-        function loadAdminData() {
-            loadSiteData();
-            
+        // Заполнение форм данными
+        function populateAdminForms() {
             const content = siteData.content || {};
             const settings = siteData.settings || {};
+            const colorScheme = siteData.colorScheme || {};
             
-            // Заполняем форму контента
+            // Форма контента
             document.getElementById('store-name').value = content.title || '';
             document.getElementById('store-description').value = content.description || '';
             document.getElementById('store-highlight').value = content.highlight || '';
@@ -1471,18 +1462,16 @@
             document.getElementById('delivery-cost').value = content.deliveryCost || 500;
             document.getElementById('min-order').value = content.minOrder || 1000;
             
-            // Заполняем контакты
+            // Форма контактов
             document.getElementById('store-phone').value = settings.storePhone || '';
             document.getElementById('newyear-phone').value = settings.newYearPhone || '';
             document.getElementById('store-address').value = settings.storeAddress || '';
             document.getElementById('store-hours').value = settings.storeHours || '';
             document.getElementById('newyear-hours').value = settings.newYearHours || '';
             
-            // Загружаем логотип
+            // Форма логотипа
             const logo = content.logo || '';
             document.getElementById('logo-url').value = logo;
-            
-            // Показываем текущий логотип
             const logoImg = document.getElementById('current-logo');
             if (logo) {
                 logoImg.src = logo;
@@ -1491,74 +1480,112 @@
                 logoImg.style.display = 'none';
             }
             
-            // Обновляем информацию
+            // Форма цветов
+            document.getElementById('color-primary').value = colorScheme.primary || '#c62828';
+            document.getElementById('color-secondary').value = colorScheme.secondary || '#2e7d32';
+            document.getElementById('color-accent').value = colorScheme.accent || '#ffd700';
+            document.getElementById('color-background').value = colorScheme.background || '#0c2461';
+            
+            updateColorPreview();
             updateLastUpdate();
-            updateSidebarInfo();
+        }
+        
+        // ==================== СОХРАНЕНИЕ ДАННЫХ ====================
+        
+        async function saveSiteData() {
+            console.log('💾 Сохранение данных...');
+            
+            // Обновляем время изменения
+            siteData.lastUpdated = new Date().toISOString();
+            
+            // Сохраняем локально
+            localStorage.setItem(SITE_DATA_KEY, JSON.stringify(siteData));
+            
+            // Сохраняем в Firebase (если доступен)
+            const savedToFirebase = await saveToFirebase('siteData', 'sobkoStore', siteData);
+            
+            if (savedToFirebase) {
+                console.log('✅ Данные сохранены в Firebase');
+                return true;
+            } else {
+                console.log('📁 Данные сохранены локально (очередь синхронизации)');
+                return false;
+            }
         }
         
         // Сохранение контента
-        function saveContent() {
-            loadSiteData();
+        async function saveContent() {
+            const content = siteData.content || {};
             
-            siteData.content = {
-                title: document.getElementById('store-name').value,
-                description: document.getElementById('store-description').value,
-                highlight: document.getElementById('store-highlight').value,
-                aboutText: document.getElementById('about-text').value,
-                warningText: document.getElementById('warning-text').value,
-                freeDelivery: parseInt(document.getElementById('free-delivery').value) || 2500,
-                deliveryCost: parseInt(document.getElementById('delivery-cost').value) || 500,
-                minOrder: parseInt(document.getElementById('min-order').value) || 1000,
-                lastUpdated: new Date().toISOString()
-            };
+            content.title = document.getElementById('store-name').value;
+            content.description = document.getElementById('store-description').value;
+            content.highlight = document.getElementById('store-highlight').value;
+            content.aboutText = document.getElementById('about-text').value;
+            content.warningText = document.getElementById('warning-text').value;
+            content.freeDelivery = parseInt(document.getElementById('free-delivery').value) || 2500;
+            content.deliveryCost = parseInt(document.getElementById('delivery-cost').value) || 500;
+            content.minOrder = parseInt(document.getElementById('min-order').value) || 1000;
             
-            // Проверка обязательных полей
-            if (!siteData.content.title) {
-                showNotification('Введите название магазина', 'error');
-                return;
+            siteData.content = content;
+            
+            const saved = await saveSiteData();
+            
+            if (saved) {
+                showNotification('✅ Контент успешно сохранен и синхронизирован!', 'success');
+            } else {
+                showNotification('✅ Контент сохранен локально. Синхронизация при восстановлении соединения.', 'warning');
             }
             
-            saveSiteData();
-            
-            showNotification('✅ Контент успешно сохранен!', 'success');
             updateLastUpdate();
-            updateSidebarInfo();
+            updateAdminInfo();
         }
         
         // Сохранение настроек
-        function saveSettings() {
-            loadSiteData();
+        async function saveSettings() {
+            const content = siteData.content || {};
             
-            siteData.settings = siteData.settings || {};
-            siteData.settings.freeDelivery = parseInt(document.getElementById('free-delivery').value) || 2500;
-            siteData.settings.deliveryCost = parseInt(document.getElementById('delivery-cost').value) || 500;
-            siteData.settings.minOrder = parseInt(document.getElementById('min-order').value) || 1000;
+            content.freeDelivery = parseInt(document.getElementById('free-delivery').value) || 2500;
+            content.deliveryCost = parseInt(document.getElementById('delivery-cost').value) || 500;
+            content.minOrder = parseInt(document.getElementById('min-order').value) || 1000;
             
-            saveSiteData();
+            siteData.content = content;
             
-            showNotification('✅ Настройки доставки сохранены!', 'success');
+            const saved = await saveSiteData();
+            
+            if (saved) {
+                showNotification('✅ Настройки доставки сохранены!', 'success');
+            } else {
+                showNotification('✅ Настройки сохранены локально', 'warning');
+            }
+            
             updateLastUpdate();
         }
         
         // Сохранение контактов
-        function saveContacts() {
-            loadSiteData();
+        async function saveContacts() {
+            const settings = siteData.settings || {};
             
-            siteData.settings = siteData.settings || {};
-            siteData.settings.storePhone = document.getElementById('store-phone').value;
-            siteData.settings.newYearPhone = document.getElementById('newyear-phone').value;
-            siteData.settings.storeAddress = document.getElementById('store-address').value;
-            siteData.settings.storeHours = document.getElementById('store-hours').value;
-            siteData.settings.newYearHours = document.getElementById('newyear-hours').value;
+            settings.storePhone = document.getElementById('store-phone').value;
+            settings.newYearPhone = document.getElementById('newyear-phone').value;
+            settings.storeAddress = document.getElementById('store-address').value;
+            settings.storeHours = document.getElementById('store-hours').value;
+            settings.newYearHours = document.getElementById('newyear-hours').value;
             
-            saveSiteData();
+            siteData.settings = settings;
             
-            showNotification('✅ Контакты сохранены!', 'success');
+            const saved = await saveSiteData();
+            
+            if (saved) {
+                showNotification('✅ Контакты сохранены и синхронизированы!', 'success');
+            } else {
+                showNotification('✅ Контакты сохранены локально', 'warning');
+            }
+            
             updateLastUpdate();
         }
         
         // Сохранение логотипа
-        function saveLogo() {
+        async function saveLogo() {
             const urlInput = document.getElementById('logo-url').value.trim();
             
             if (urlInput) {
@@ -1567,17 +1594,21 @@
                     return;
                 }
                 
-                loadSiteData();
                 siteData.content = siteData.content || {};
                 siteData.content.logo = urlInput;
                 
-                saveSiteData();
+                const saved = await saveSiteData();
                 
                 // Обновляем изображение
                 document.getElementById('current-logo').src = urlInput;
                 document.getElementById('current-logo').style.display = 'block';
                 
-                showNotification('✅ Логотип сохранен!', 'success');
+                if (saved) {
+                    showNotification('✅ Логотип сохранен и синхронизирован!', 'success');
+                } else {
+                    showNotification('✅ Логотип сохранен локально', 'warning');
+                }
+                
                 updateLastUpdate();
             } else {
                 showNotification('❌ Введите URL логотипа', 'error');
@@ -1594,174 +1625,9 @@
             }
         }
         
-        // ==================== УПРАВЛЕНИЕ ЦВЕТАМИ ====================
-        
-        // Загрузка текущих цветов
-        function loadCurrentColors() {
-            loadSiteData();
-            
-            const colorScheme = siteData.colorScheme || {
-                primary: '#c62828',
-                secondary: '#2e7d32',
-                accent: '#ffd700',
-                background: '#0c2461'
-            };
-            
-            // Заполняем поля выбора цвета
-            document.getElementById('color-primary').value = colorScheme.primary;
-            document.getElementById('color-secondary').value = colorScheme.secondary;
-            document.getElementById('color-accent').value = colorScheme.accent;
-            document.getElementById('color-background').value = colorScheme.background;
-            
-            // Обновляем текстовые значения
-            document.getElementById('color-primary-value').textContent = colorScheme.primary;
-            document.getElementById('color-secondary-value').textContent = colorScheme.secondary;
-            document.getElementById('color-accent-value').textContent = colorScheme.accent;
-            document.getElementById('color-background-value').textContent = colorScheme.background;
-            
-            // Обновляем предпросмотр
-            updateColorPreview();
-        }
-        
-        // Обновление предпросмотра цветов
-        function updateColorPreview() {
-            const primaryColor = document.getElementById('color-primary').value;
-            const secondaryColor = document.getElementById('color-secondary').value;
-            const accentColor = document.getElementById('color-accent').value;
-            const backgroundColor = document.getElementById('color-background').value;
-            
-            // Обновляем текстовые значения
-            document.getElementById('color-primary-value').textContent = primaryColor;
-            document.getElementById('color-secondary-value').textContent = secondaryColor;
-            document.getElementById('color-accent-value').textContent = accentColor;
-            document.getElementById('color-background-value').textContent = backgroundColor;
-            
-            // Обновляем предпросмотр
-            const previewBox = document.getElementById('color-preview-box');
-            previewBox.style.setProperty('--color-preview-primary', primaryColor);
-            previewBox.style.setProperty('--color-preview-secondary', secondaryColor);
-            previewBox.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
-            
-            // Устанавливаем цвет текста в зависимости от яркости фона
-            const brightness = getColorBrightness(primaryColor);
-            previewBox.style.color = brightness > 128 ? '#333' : 'white';
-        }
-        
-        // Получение яркости цвета
-        function getColorBrightness(hexColor) {
-            // Конвертируем hex в RGB
-            const r = parseInt(hexColor.substr(1, 2), 16);
-            const g = parseInt(hexColor.substr(3, 2), 16);
-            const b = parseInt(hexColor.substr(5, 2), 16);
-            
-            // Формула яркости (стандартная)
-            return (r * 299 + g * 587 + b * 114) / 1000;
-        }
-        
-        // Применение готовой цветовой схемы
-        function applyColorScheme(schemeName) {
-            let colors;
-            
-            switch(schemeName) {
-                case 'christmas':
-                    colors = {
-                        primary: '#c62828',
-                        secondary: '#2e7d32',
-                        accent: '#ffd700',
-                        background: '#0c2461',
-                        name: 'Новогодняя'
-                    };
-                    break;
-                    
-                case 'winter':
-                    colors = {
-                        primary: '#1e3799',
-                        secondary: '#4a69bd',
-                        accent: '#82ccdd',
-                        background: '#0c2461',
-                        name: 'Зимняя'
-                    };
-                    break;
-                    
-                case 'elegant':
-                    colors = {
-                        primary: '#2c3e50',
-                        secondary: '#34495e',
-                        accent: '#95a5a6',
-                        background: '#1a252f',
-                        name: 'Элегантная'
-                    };
-                    break;
-                    
-                case 'warm':
-                    colors = {
-                        primary: '#e74c3c',
-                        secondary: '#e67e22',
-                        accent: '#f1c40f',
-                        background: '#d35400',
-                        name: 'Теплая'
-                    };
-                    break;
-                    
-                case 'nature':
-                    colors = {
-                        primary: '#27ae60',
-                        secondary: '#2ecc71',
-                        accent: '#1abc9c',
-                        background: '#16a085',
-                        name: 'Природная'
-                    };
-                    break;
-                    
-                default:
-                    colors = {
-                        primary: '#c62828',
-                        secondary: '#2e7d32',
-                        accent: '#ffd700',
-                        background: '#0c2461',
-                        name: 'Стандартная'
-                    };
-            }
-            
-            // Заполняем поля
-            document.getElementById('color-primary').value = colors.primary;
-            document.getElementById('color-secondary').value = colors.secondary;
-            document.getElementById('color-accent').value = colors.accent;
-            document.getElementById('color-background').value = colors.background;
-            
-            // Обновляем предпросмотр
-            updateColorPreview();
-            
-            showNotification(`✅ Цветовая схема "${colors.name}" выбрана! Нажмите "Сохранить цвета" для применения.`, 'success');
-        }
-        
-        // Сохранение кастомных цветов
-        function saveCustomColors() {
-            const colorScheme = {
-                primary: document.getElementById('color-primary').value,
-                secondary: document.getElementById('color-secondary').value,
-                accent: document.getElementById('color-accent').value,
-                background: document.getElementById('color-background').value,
-                lastUpdated: new Date().toISOString()
-            };
-            
-            loadSiteData();
-            siteData.colorScheme = colorScheme;
-            saveSiteData();
-            
-            showNotification('✅ Цветовая схема сохранена!', 'success');
-        }
-        
-        // Сброс цветов к стандартным
-        function resetColors() {
-            applyColorScheme('christmas');
-            showNotification('✅ Цвета сброшены к новогодней схеме', 'info');
-        }
-        
         // ==================== УПРАВЛЕНИЕ ТОВАРАМИ ====================
         
-        // Добавление товара
-        function addProduct() {
+        async function addProduct() {
             const name = document.getElementById('product-name').value.trim();
             const description = document.getElementById('product-description').value.trim();
             const price = parseInt(document.getElementById('product-price').value);
@@ -1782,10 +1648,8 @@
                 return;
             }
             
-            loadSiteData();
-            
-            let products = siteData.products || [];
-            const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+            siteData.products = siteData.products || [];
+            const newId = siteData.products.length > 0 ? Math.max(...siteData.products.map(p => p.id)) + 1 : 1;
             
             const newProduct = {
                 id: newId,
@@ -1799,10 +1663,9 @@
                 isActive: true
             };
             
-            products.push(newProduct);
-            siteData.products = products;
+            siteData.products.push(newProduct);
             
-            saveSiteData();
+            const saved = await saveSiteData();
             
             // Очищаем форму
             clearProductForm();
@@ -1811,9 +1674,13 @@
             loadProductsForAdmin();
             
             // Обновляем информацию в сайдбаре
-            updateSidebarInfo();
+            updateAdminInfo();
             
-            showNotification(`✅ Товар "${name}" добавлен!`, 'success');
+            if (saved) {
+                showNotification(`✅ Товар "${name}" добавлен и синхронизирован!`, 'success');
+            } else {
+                showNotification(`✅ Товар "${name}" добавлен локально`, 'warning');
+            }
         }
         
         // Очистка формы товара
@@ -1828,8 +1695,6 @@
         
         // Загрузка товаров для админки
         function loadProductsForAdmin() {
-            loadSiteData();
-            
             const products = siteData.products || [];
             const container = document.getElementById('products-list');
             
@@ -1894,9 +1759,6 @@
         // Поиск товаров
         function searchProducts() {
             const searchTerm = document.getElementById('product-search').value.toLowerCase();
-            loadSiteData();
-            
-            const products = siteData.products || [];
             const container = document.getElementById('products-list');
             
             if (!searchTerm) {
@@ -1904,6 +1766,7 @@
                 return;
             }
             
+            const products = siteData.products || [];
             const filteredProducts = products.filter(product => 
                 product.name.toLowerCase().includes(searchTerm) ||
                 (product.description && product.description.toLowerCase().includes(searchTerm)) ||
@@ -1923,6 +1786,8 @@
             
             let html = '';
             filteredProducts.forEach(product => {
+                const isActive = product.isActive !== false;
+                
                 html += `
                     <div class="product-admin-card">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -1931,6 +1796,7 @@
                                 <span style="font-size: 0.85rem; color: #888; background: #f8f9fa; padding: 2px 8px; border-radius: 10px;">
                                     ${product.category || 'cheese'}
                                 </span>
+                                ${!isActive ? '<span style="font-size: 0.75rem; color: #c62828; margin-left: 8px;">(скрыт)</span>' : ''}
                             </div>
                             <div class="product-price">${product.price} ₽</div>
                         </div>
@@ -1947,6 +1813,9 @@
                                 <button onclick="editProduct(${product.id})" class="action-btn btn-view">
                                     <i class="fas fa-edit"></i>
                                 </button>
+                                <button onclick="toggleProductStatus(${product.id})" class="action-btn" style="background: ${isActive ? '#f39c12' : '#27ae60'}; color: white;">
+                                    <i class="fas fa-${isActive ? 'eye-slash' : 'eye'}"></i>
+                                </button>
                                 <button onclick="deleteProduct(${product.id})" class="action-btn btn-cancel">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -1959,30 +1828,32 @@
             container.innerHTML = html;
         }
         
-        // Изменение статуса товара (активный/неактивный)
-        function toggleProductStatus(productId) {
-            loadSiteData();
-            
+        // Изменение статуса товара
+        async function toggleProductStatus(productId) {
             let products = siteData.products || [];
             const productIndex = products.findIndex(p => p.id === productId);
             
             if (productIndex !== -1) {
                 products[productIndex].isActive = !(products[productIndex].isActive !== false);
                 siteData.products = products;
-                saveSiteData();
+                
+                const saved = await saveSiteData();
                 
                 const productName = products[productIndex].name;
                 const status = products[productIndex].isActive ? 'активен' : 'скрыт';
                 
-                showNotification(`✅ Товар "${productName}" теперь ${status}`, 'success');
+                if (saved) {
+                    showNotification(`✅ Товар "${productName}" теперь ${status}`, 'success');
+                } else {
+                    showNotification(`✅ Товар "${productName}" теперь ${status} (локально)`, 'warning');
+                }
+                
                 loadProductsForAdmin();
             }
         }
         
         // Редактирование товара
         function editProduct(productId) {
-            loadSiteData();
-            
             let products = siteData.products || [];
             const product = products.find(p => p.id === productId);
             
@@ -2011,7 +1882,7 @@
         }
         
         // Сохранение изменений товара
-        function saveProductEdit(productId) {
+        async function saveProductEdit(productId) {
             const name = document.getElementById('product-name').value.trim();
             const description = document.getElementById('product-description').value.trim();
             const price = parseInt(document.getElementById('product-price').value);
@@ -2030,8 +1901,6 @@
                 return;
             }
             
-            loadSiteData();
-            
             let products = siteData.products || [];
             const productIndex = products.findIndex(p => p.id === productId);
             
@@ -2048,7 +1917,8 @@
                 };
                 
                 siteData.products = products;
-                saveSiteData();
+                
+                const saved = await saveSiteData();
                 
                 // Возвращаем кнопку добавления
                 const addButton = document.querySelector('#products-section .btn-primary');
@@ -2061,17 +1931,19 @@
                 // Обновляем список
                 loadProductsForAdmin();
                 
-                showNotification(`✅ Товар "${name}" обновлен!`, 'success');
+                if (saved) {
+                    showNotification(`✅ Товар "${name}" обновлен и синхронизирован!`, 'success');
+                } else {
+                    showNotification(`✅ Товар "${name}" обновлен локально`, 'warning');
+                }
             } else {
                 showNotification('Товар не найден', 'error');
             }
         }
         
         // Удаление товара
-        function deleteProduct(productId) {
+        async function deleteProduct(productId) {
             if (confirm('Вы уверены, что хотите удалить этот товар?')) {
-                loadSiteData();
-                
                 let products = siteData.products || [];
                 const productIndex = products.findIndex(p => p.id === productId);
                 
@@ -2079,28 +1951,38 @@
                     const productName = products[productIndex].name;
                     products.splice(productIndex, 1);
                     siteData.products = products;
-                    saveSiteData();
                     
-                    showNotification(`✅ Товар "${productName}" удален!`, 'success');
+                    const saved = await saveSiteData();
+                    
+                    if (saved) {
+                        showNotification(`✅ Товар "${productName}" удален!`, 'success');
+                    } else {
+                        showNotification(`✅ Товар "${productName}" удален локально`, 'warning');
+                    }
+                    
                     loadProductsForAdmin();
-                    updateSidebarInfo();
+                    updateAdminInfo();
                 }
             }
         }
         
         // ==================== УПРАВЛЕНИЕ ЗАКАЗАМИ ====================
         
-        // Загрузка заказов
         function loadOrders() {
-            loadSiteData();
-            
             const orders = siteData.orders || [];
             const tbody = document.getElementById('orders-table-body');
             const ordersCount = document.getElementById('orders-count');
             
-            ordersCount.textContent = orders.length;
+            let filteredOrders = orders;
             
-            if (orders.length === 0) {
+            // Применяем фильтр
+            if (currentFilter !== 'all') {
+                filteredOrders = orders.filter(order => order.status === currentFilter);
+            }
+            
+            ordersCount.textContent = filteredOrders.length;
+            
+            if (filteredOrders.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
@@ -2113,7 +1995,7 @@
             }
             
             let html = '';
-            orders.reverse().forEach(order => {
+            filteredOrders.reverse().forEach(order => {
                 const statusClass = `status-${order.status || 'new'}`;
                 const statusText = getOrderStatusText(order.status);
                 
@@ -2171,8 +2053,6 @@
         }
         
         function viewOrder(orderId) {
-            loadSiteData();
-            
             const orders = siteData.orders || [];
             const order = orders.find(o => o.id === orderId);
             
@@ -2296,9 +2176,7 @@
             if (modal) modal.remove();
         }
         
-        function updateOrderStatus(orderId, status) {
-            loadSiteData();
-            
+        async function updateOrderStatus(orderId, status) {
             const orders = siteData.orders || [];
             const orderIndex = orders.findIndex(o => o.id === orderId);
             
@@ -2306,31 +2184,35 @@
                 orders[orderIndex].status = status;
                 orders[orderIndex].updatedAt = new Date().toISOString();
                 siteData.orders = orders;
-                saveSiteData();
+                
+                const saved = await saveSiteData();
                 
                 const statusText = getOrderStatusText(status);
-                showNotification(`✅ Статус заказа обновлен на "${statusText}"`, 'success');
+                
+                if (saved) {
+                    showNotification(`✅ Статус заказа обновлен на "${statusText}"`, 'success');
+                } else {
+                    showNotification(`✅ Статус заказа обновлен локально на "${statusText}"`, 'warning');
+                }
+                
                 loadOrders();
                 updateStatistics();
-                updateSidebarInfo();
+                updateAdminInfo();
             }
         }
         
         function filterOrders(filter) {
+            currentFilter = filter;
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             
             event.target.classList.add('active');
-            
-            // Здесь можно добавить фильтрацию заказов
-            loadOrders(); // Показываем все заказы
+            loadOrders();
         }
         
         function searchOrders() {
             const searchTerm = document.getElementById('order-search').value.toLowerCase();
-            loadSiteData();
-            
             const orders = siteData.orders || [];
             const tbody = document.getElementById('orders-table-body');
             
@@ -2339,7 +2221,15 @@
                 return;
             }
             
-            const filteredOrders = orders.filter(order => 
+            let filteredOrders = orders;
+            
+            // Применяем текущий фильтр
+            if (currentFilter !== 'all') {
+                filteredOrders = orders.filter(order => order.status === currentFilter);
+            }
+            
+            // Применяем поиск
+            filteredOrders = filteredOrders.filter(order => 
                 (order.userName && order.userName.toLowerCase().includes(searchTerm)) ||
                 (order.userPhone && order.userPhone.toLowerCase().includes(searchTerm)) ||
                 (order.id && order.id.toLowerCase().includes(searchTerm)) ||
@@ -2395,8 +2285,6 @@
         }
         
         function exportOrders() {
-            loadSiteData();
-            
             const orders = siteData.orders || [];
             
             if (orders.length === 0) {
@@ -2441,11 +2329,140 @@
             showNotification(`✅ Экспортировано ${orders.length} заказов`, 'success');
         }
         
+        // ==================== УПРАВЛЕНИЕ ЦВЕТАМИ ====================
+        
+        function updateColorPreview() {
+            const primaryColor = document.getElementById('color-primary').value;
+            const secondaryColor = document.getElementById('color-secondary').value;
+            const accentColor = document.getElementById('color-accent').value;
+            const backgroundColor = document.getElementById('color-background').value;
+            
+            // Обновляем текстовые значения
+            document.getElementById('color-primary-value').textContent = primaryColor;
+            document.getElementById('color-secondary-value').textContent = secondaryColor;
+            document.getElementById('color-accent-value').textContent = accentColor;
+            document.getElementById('color-background-value').textContent = backgroundColor;
+            
+            // Обновляем предпросмотр
+            const previewBox = document.getElementById('color-preview-box');
+            previewBox.style.setProperty('--color-preview-primary', primaryColor);
+            previewBox.style.setProperty('--color-preview-secondary', secondaryColor);
+            previewBox.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
+            
+            // Устанавливаем цвет текста в зависимости от яркости фона
+            const brightness = getColorBrightness(primaryColor);
+            previewBox.style.color = brightness > 128 ? '#333' : 'white';
+        }
+        
+        function getColorBrightness(hexColor) {
+            const r = parseInt(hexColor.substr(1, 2), 16);
+            const g = parseInt(hexColor.substr(3, 2), 16);
+            const b = parseInt(hexColor.substr(5, 2), 16);
+            return (r * 299 + g * 587 + b * 114) / 1000;
+        }
+        
+        function applyColorScheme(schemeName) {
+            let colors;
+            
+            switch(schemeName) {
+                case 'christmas':
+                    colors = {
+                        primary: '#c62828',
+                        secondary: '#2e7d32',
+                        accent: '#ffd700',
+                        background: '#0c2461',
+                        name: 'Новогодняя'
+                    };
+                    break;
+                    
+                case 'winter':
+                    colors = {
+                        primary: '#1e3799',
+                        secondary: '#4a69bd',
+                        accent: '#82ccdd',
+                        background: '#0c2461',
+                        name: 'Зимняя'
+                    };
+                    break;
+                    
+                case 'elegant':
+                    colors = {
+                        primary: '#2c3e50',
+                        secondary: '#34495e',
+                        accent: '#95a5a6',
+                        background: '#1a252f',
+                        name: 'Элегантная'
+                    };
+                    break;
+                    
+                case 'warm':
+                    colors = {
+                        primary: '#e74c3c',
+                        secondary: '#e67e22',
+                        accent: '#f1c40f',
+                        background: '#d35400',
+                        name: 'Теплая'
+                    };
+                    break;
+                    
+                case 'nature':
+                    colors = {
+                        primary: '#27ae60',
+                        secondary: '#2ecc71',
+                        accent: '#1abc9c',
+                        background: '#16a085',
+                        name: 'Природная'
+                    };
+                    break;
+                    
+                default:
+                    colors = {
+                        primary: '#c62828',
+                        secondary: '#2e7d32',
+                        accent: '#ffd700',
+                        background: '#0c2461',
+                        name: 'Стандартная'
+                    };
+            }
+            
+            // Заполняем поля
+            document.getElementById('color-primary').value = colors.primary;
+            document.getElementById('color-secondary').value = colors.secondary;
+            document.getElementById('color-accent').value = colors.accent;
+            document.getElementById('color-background').value = colors.background;
+            
+            updateColorPreview();
+            
+            showNotification(`✅ Цветовая схема "${colors.name}" выбрана! Нажмите "Сохранить цвета" для применения.`, 'success');
+        }
+        
+        async function saveCustomColors() {
+            const colorScheme = {
+                primary: document.getElementById('color-primary').value,
+                secondary: document.getElementById('color-secondary').value,
+                accent: document.getElementById('color-accent').value,
+                background: document.getElementById('color-background').value
+            };
+            
+            siteData.colorScheme = colorScheme;
+            
+            const saved = await saveSiteData();
+            
+            if (saved) {
+                showNotification('✅ Цветовая схема сохранена и синхронизирована!', 'success');
+            } else {
+                showNotification('✅ Цветовая схема сохранена локально', 'warning');
+            }
+        }
+        
+        function resetColors() {
+            applyColorScheme('christmas');
+            showNotification('✅ Цвета сброшены к новогодней схеме', 'info');
+        }
+        
         // ==================== СТАТИСТИКА ====================
         
         function updateStatistics() {
-            loadSiteData();
-            
             const orders = siteData.orders || [];
             const products = siteData.products || [];
             
@@ -2513,8 +2530,6 @@
         }
         
         function updateRecentOrders() {
-            loadSiteData();
-            
             const orders = siteData.orders || [];
             const recentOrdersContainer = document.getElementById('recent-orders');
             
@@ -2529,7 +2544,7 @@
                 return;
             }
             
-            const recentOrders = orders.slice(-5).reverse(); // Последние 5 заказов
+            const recentOrders = orders.slice(-5).reverse();
             
             let html = '';
             recentOrders.forEach(order => {
@@ -2574,9 +2589,7 @@
             recentOrdersContainer.innerHTML = html;
         }
         
-        function updateSidebarInfo() {
-            loadSiteData();
-            
+        function updateAdminInfo() {
             const orders = siteData.orders || [];
             const products = siteData.products || [];
             
@@ -2599,13 +2612,50 @@
             document.getElementById('last-update').textContent = formattedDate;
         }
         
-        function updateLiveSite() {
-            saveSiteData();
+        async function updateLiveSite() {
+            const saved = await saveSiteData();
             
-            showNotification('✅ Все изменения сохранены! Сайт будет обновлен для всех пользователей.', 'success');
+            if (saved) {
+                showNotification('✅ Все изменения сохранены и синхронизированы! Пользователи увидят обновления.', 'success', 5000);
+            } else {
+                showNotification('✅ Все изменения сохранены локально. Синхронизация при восстановлении соединения.', 'warning', 5000);
+            }
         }
         
         // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+        
+        function showSection(sectionId) {
+            // Скрываем все секции
+            document.querySelectorAll('.admin-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Показываем нужную секцию
+            document.getElementById(sectionId + '-section').classList.add('active');
+            
+            // Обновляем активную ссылку в навигации
+            document.querySelectorAll('.admin-nav a').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const activeLink = document.querySelector(`.admin-nav a[href="#${sectionId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            
+            // Обновляем данные при переключении
+            if (sectionId === 'orders') {
+                loadOrders();
+            }
+            
+            if (sectionId === 'statistics') {
+                updateStatistics();
+            }
+            
+            if (sectionId === 'colors') {
+                updateColorPreview();
+            }
+        }
         
         function logout() {
             localStorage.removeItem('adminLoggedIn');
@@ -2622,6 +2672,8 @@
                 notification.style.display = 'none';
             }, duration);
         }
+        
+        console.log('✅ Админ-панель инициализирована');
     </script>
 </body>
 </html>
