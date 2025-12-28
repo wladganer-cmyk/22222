@@ -732,6 +732,118 @@
             font-weight: bold;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }
+    <script>
+        // ==================== FIREBASE ФУНКЦИИ (ДЛЯ АДМИНКИ) ====================
+        
+        let firebaseApp, firebaseDb, firebaseAuth, firebaseStorage;
+        
+        // Проверка подключения к Firebase
+        function checkFirebaseConnection() {
+            try {
+                return firebase && firebase.apps && firebase.apps.length > 0 && navigator.onLine;
+            } catch (error) {
+                return false;
+            }
+        }
+        
+        // Инициализация Firebase
+        function initializeFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    // Ваша конфигурация Firebase (должна быть в firebase-config.js)
+                    const firebaseConfig = {
+                        apiKey: "ваш_api_key",
+                        authDomain: "ваш_auth_domain",
+                        projectId: "ваш_project_id",
+                        storageBucket: "ваш_storage_bucket",
+                        messagingSenderId: "ваш_messaging_sender_id",
+                        appId: "ваш_app_id"
+                    };
+                    
+                    firebaseApp = firebase.initializeApp(firebaseConfig);
+                    firebaseDb = firebase.firestore();
+                    firebaseAuth = firebase.auth();
+                    firebaseStorage = firebase.storage();
+                    console.log('✅ Firebase подключен');
+                } else {
+                    firebaseApp = firebase.app();
+                    firebaseDb = firebase.firestore();
+                    firebaseAuth = firebase.auth();
+                    firebaseStorage = firebase.storage();
+                }
+                return true;
+            } catch (error) {
+                console.error('❌ Ошибка подключения Firebase:', error);
+                return false;
+            }
+        }
+        
+        // Загрузка данных из Firebase
+        async function loadFromFirebase(collectionName, documentId) {
+            if (!checkFirebaseConnection()) {
+                console.log('❌ Firebase недоступен для загрузки');
+                return null;
+            }
+            
+            try {
+                const docRef = firebaseDb.collection(collectionName).doc(documentId);
+                const doc = await docRef.get();
+                
+                if (doc.exists) {
+                    console.log('✅ Данные загружены из Firebase');
+                    return doc.data();
+                } else {
+                    console.log('📭 Документ не найден в Firebase');
+                    return null;
+                }
+            } catch (error) {
+                console.error('❌ Ошибка загрузки из Firebase:', error);
+                return null;
+            }
+        }
+        
+        // Сохранение данных в Firebase
+        async function saveToFirebase(collectionName, documentId, data) {
+            if (!checkFirebaseConnection()) {
+                console.log('❌ Firebase недоступен для сохранения');
+                return false;
+            }
+            
+            try {
+                await firebaseDb.collection(collectionName).doc(documentId).set(data, { merge: true });
+                console.log('✅ Данные сохранены в Firebase');
+                return true;
+            } catch (error) {
+                console.error('❌ Ошибка сохранения в Firebase:', error);
+                return false;
+            }
+        }
+        
+        // ==================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ====================
+        const SITE_DATA_KEY = 'sobko_site_data';
+        let siteData = {};
+        let currentFilter = 'all';
+        
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔧 Загрузка админ-панели...');
+            
+            // Проверка авторизации
+            if (!checkAdminAuth()) {
+                return;
+            }
+            
+            // Инициализация Firebase
+            initializeFirebase();
+            
+            // Загрузка данных
+            await loadAdminData();
+            
+            console.log('✅ Админ-панель загружена');
+        });
+        
+        // ... остальной код без изменений ...
+        
     </style>
 </head>
 <body>
@@ -2884,3 +2996,4 @@
     </script>
 </body>
 </html>
+
