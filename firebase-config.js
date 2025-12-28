@@ -1,16 +1,27 @@
 // firebase-config.js
 // ⚠️ ЗАМЕНИТЕ ЭТИ ДАННЫЕ НА СВОИ С FIREBASE CONSOLE ⚠️
 
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "AIzaSyABC1234567890DEFghijklmnopQRSTUVWXYZ",
-    authDomain: "sobko-cheese-shop.firebaseapp.com",
-    databaseURL: "https://sobko-cheese-shop-default-rtdb.firebaseio.com",
-    projectId: "sobko-cheese-shop",
-    storageBucket: "sobko-cheese-shop.appspot.com",
-    messagingSenderId: "123456789012",
-    appId: "1:123456789012:web:abcdef1234567890fedcba",
-    measurementId: "G-ABCDEF1234"
+  apiKey: "AIzaSyCAwsUfEa4zkAq-aM1Xc-uE9b3phnQTyYU",
+  authDomain: "sirvornya-sobko.firebaseapp.com",
+  projectId: "sirvornya-sobko",
+  storageBucket: "sirvornya-sobko.firebasestorage.app",
+  messagingSenderId: "56185607530",
+  appId: "1:56185607530:web:82ff25d529d049d4e08113",
+  measurementId: "G-Q8022N5S96"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
 // Глобальные переменные Firebase
 let firebaseApp;
@@ -262,3 +273,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('✅ Firebase конфигурация загружена');
+
